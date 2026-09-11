@@ -52,7 +52,9 @@
   .btn:hover { border-color: #bcc6d6; transform: translateY(-1px); }
   .btn.primary { background: var(--accent); border-color: var(--accent); color: white; }
   .btn.ghost { background: transparent; box-shadow: none; }
-  .btn.danger { color: var(--danger); }
+  .btn.danger { color: var(--danger); border-color: rgba(214,69,69,.35); }
+  .btn.danger-solid { background: var(--danger); border-color: var(--danger); color: white; }
+  .btn.danger-solid:hover { border-color: #b93636; background: #c83e3e; }
 
   .mode-tabs {
     display: flex; gap: 8px; padding: 6px; background: #e9ecf3; border-radius: 14px;
@@ -68,6 +70,40 @@
     background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
     padding: 16px; box-shadow: var(--shadow); margin-bottom: 16px;
   }
+
+  .analytics-shell { display: grid; gap: 16px; }
+  .analytics-hero {
+    display: grid; grid-template-columns: repeat(4, minmax(140px, 1fr)); gap: 12px;
+  }
+  .analytics-card {
+    background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
+    padding: 18px; box-shadow: var(--shadow);
+  }
+  .analytics-card h2, .analytics-card h3 { margin: 0 0 6px; }
+  .analytics-card p { margin: 0; color: var(--muted); line-height: 1.45; }
+  .metric-big { font-size: clamp(28px, 4vw, 42px); font-weight: 950; letter-spacing: -.04em; margin-top: 8px; }
+  .metric-sub { color: var(--muted); font-size: 13px; margin-top: 3px; }
+  .analytics-grid { display: grid; grid-template-columns: 1fr 1.35fr; gap: 16px; }
+  .score-dist { display: grid; gap: 13px; margin-top: 16px; }
+  .dist-row { display: grid; grid-template-columns: 82px 1fr 112px; gap: 10px; align-items: center; }
+  .dist-label { font-weight: 850; }
+  .dist-track { height: 14px; background: #edf0f5; border-radius: 999px; overflow: hidden; }
+  .dist-fill { height: 100%; border-radius: inherit; min-width: 0; }
+  .dist-fill.r1 { background: var(--danger); }
+  .dist-fill.r2 { background: var(--meh); }
+  .dist-fill.r3 { background: var(--good); }
+  .dist-fill.r4 { background: var(--love); }
+  .dist-value { text-align: right; color: var(--muted); font-size: 13px; }
+  .gen-table-wrap { overflow-x: auto; margin-top: 14px; }
+  .gen-table { width: 100%; border-collapse: collapse; min-width: 650px; }
+  .gen-table th, .gen-table td { padding: 10px 9px; border-bottom: 1px solid var(--line); text-align: right; font-size: 13px; }
+  .gen-table th:first-child, .gen-table td:first-child { text-align: left; }
+  .gen-table th { color: var(--muted); font-size: 12px; }
+  .gen-table tr.best-row { background: #f4f7ff; }
+  .mini-bar { width: 120px; height: 8px; background: #edf0f5; border-radius: 999px; overflow: hidden; display: inline-block; vertical-align: middle; margin-left: 8px; }
+  .mini-bar > span { display: block; height: 100%; background: var(--accent); border-radius: inherit; }
+  .insight-list { display: grid; gap: 9px; margin-top: 14px; }
+  .insight { padding: 11px 12px; background: #f7f8fb; border-radius: 12px; line-height: 1.4; }
   .status-grid { display: grid; grid-template-columns: repeat(5, minmax(100px, 1fr)); gap: 10px; }
   .stat { padding: 10px 12px; border-radius: 13px; background: #f7f8fb; }
   .stat strong { display: block; font-size: 21px; }
@@ -255,6 +291,8 @@
     .topbar { flex-direction: column; }
     .utility-row { justify-content: flex-start; }
     .status-grid { grid-template-columns: repeat(2, 1fr); }
+    .analytics-hero { grid-template-columns: repeat(2, 1fr); }
+    .analytics-grid { grid-template-columns: 1fr; }
     .versus { grid-template-columns: 1fr; }
     .vs-label { text-align: center; }
     .choice-card img { height: 280px; }
@@ -272,6 +310,8 @@
     .single-rank-btn { padding: 11px 3px; font-size: 12px; }
     .single-nav { align-items: stretch; flex-direction: column; }
     .status-grid { grid-template-columns: repeat(2, 1fr); }
+    .analytics-hero { grid-template-columns: 1fr 1fr; }
+    .dist-row { grid-template-columns: 72px 1fr 86px; gap: 7px; }
   }
 </style>
 </head>
@@ -297,6 +337,7 @@
       <button class="btn" id="importBtn">Import progress</button>
       <button class="btn" id="exportCsvBtn">Export progress (.csv)</button>
       <button class="btn" id="backupBtn">Export full backup (.json)</button>
+      <button class="btn danger-solid" id="resetAllBtn">Reset All</button>
       <button class="btn ghost" id="refreshDataBtn" title="Reload names, numbers, generations and images from Bulbapedia">Refresh Bulbapedia data</button>
       <input type="file" id="fileInput" accept=".csv,.json,text/csv,application/json" class="hidden" />
     </div>
@@ -305,6 +346,7 @@
   <div class="mode-tabs">
     <button class="mode-tab active" data-mode="rate">1. Rate 1–4</button>
     <button class="mode-tab" data-mode="compare">2. Find my favorite</button>
+    <button class="mode-tab" data-mode="stats">3. Statistics</button>
   </div>
 
   <section id="rateView">
@@ -350,6 +392,10 @@
 
   <section id="compareView" class="hidden">
     <div class="compare-shell" id="compareShell"></div>
+  </section>
+
+  <section id="statsView" class="hidden">
+    <div class="analytics-shell" id="statsShell"></div>
   </section>
 </div>
 
@@ -405,9 +451,12 @@
     rateView: $('#rateView'),
     compareView: $('#compareView'),
     compareShell: $('#compareShell'),
+    statsView: $('#statsView'),
+    statsShell: $('#statsShell'),
     importBtn: $('#importBtn'),
     exportCsvBtn: $('#exportCsvBtn'),
     backupBtn: $('#backupBtn'),
+    resetAllBtn: $('#resetAllBtn'),
     refreshDataBtn: $('#refreshDataBtn'),
     fileInput: $('#fileInput'),
     toast: $('#toast')
@@ -421,9 +470,17 @@
   }
 
   function loadExistingRankings() {
-    // Keep the current storage key first, but also recover progress from older builds if present.
-    const keys = [RANK_KEY, 'pokemonFavoriteFinder_rankings_v2', 'pokemonFavoriteFinder_rankings_v1'];
-    for (const key of keys) {
+    // If the current key exists, even an intentionally empty object after Reset All is authoritative.
+    try {
+      if (localStorage.getItem(RANK_KEY) !== null) {
+        const current = loadJSON(RANK_KEY, {});
+        if (current && typeof current === 'object' && !Array.isArray(current)) return current;
+      }
+    } catch {}
+
+    // Only recover from older builds when the current version has never saved progress.
+    const legacyKeys = ['pokemonFavoriteFinder_rankings_v2', 'pokemonFavoriteFinder_rankings_v1'];
+    for (const key of legacyKeys) {
       const data = loadJSON(key, null);
       if (data && typeof data === 'object' && !Array.isArray(data) && Object.keys(data).length) return data;
     }
@@ -602,6 +659,7 @@
     // Keep rankings that still map to current species. Old data is not deleted so future refreshes can recover it.
     if (!ROMANS.includes(ui.activeGen) || !pokemon.some(p => p.gen === ui.activeGen)) ui.activeGen = pokemon[0]?.gen || 'I';
     if (!['grid','single'].includes(ui.ratingView)) ui.ratingView = 'grid';
+    if (!['rate','compare','stats'].includes(ui.mode)) ui.mode = 'rate';
     if (!ui.singleIndexByGen || typeof ui.singleIndexByGen !== 'object') ui.singleIndexByGen = {};
     renderGenerationTabs();
     bindUI();
@@ -638,6 +696,7 @@
     els.fileInput.addEventListener('change', importFile);
     els.exportCsvBtn.addEventListener('click', exportCSV);
     els.backupBtn.addEventListener('click', exportBackup);
+    els.resetAllBtn.addEventListener('click', resetAllProgress);
     els.refreshDataBtn.addEventListener('click', async () => {
       try {
         setLoading(true, 'Refreshing Bulbapedia data…', 'Your ratings will be preserved while the source list is refreshed.');
@@ -661,8 +720,10 @@
     $$('.mode-tab').forEach(btn => btn.classList.toggle('active', btn.dataset.mode === mode));
     els.rateView.classList.toggle('hidden', mode !== 'rate');
     els.compareView.classList.toggle('hidden', mode !== 'compare');
+    els.statsView.classList.toggle('hidden', mode !== 'stats');
     if (mode === 'rate') renderRatingView();
     if (mode === 'compare') renderCompare();
+    if (mode === 'stats') renderAnalytics();
   }
 
   function renderAll() {
@@ -670,6 +731,7 @@
     renderGenerationTabs();
     renderRatingView();
     if (ui.mode === 'compare') renderCompare();
+    if (ui.mode === 'stats') renderAnalytics();
   }
 
   function switchRatingView(view) {
@@ -729,6 +791,135 @@
     els.overallPercent.textContent = `${pct}%`;
     els.genPercent.textContent = `${gpct}%`;
     els.progressFill.style.width = `${pct}%`;
+  }
+
+  function renderAnalytics() {
+    const validRated = pokemon.filter(p => [1,2,3,4].includes(Number(rankings[p.key])));
+    const ratedCount = validRated.length;
+    const total = pokemon.length;
+    const overallAverage = ratedCount
+      ? validRated.reduce((sum, p) => sum + Number(rankings[p.key]), 0) / ratedCount
+      : 0;
+
+    const counts = {1:0,2:0,3:0,4:0};
+    validRated.forEach(p => counts[Number(rankings[p.key])]++);
+
+    const genRows = ROMANS.filter(gen => pokemon.some(p => p.gen === gen)).map(gen => {
+      const all = pokemon.filter(p => p.gen === gen);
+      const rated = all.filter(p => [1,2,3,4].includes(Number(rankings[p.key])));
+      const sum = rated.reduce((acc, p) => acc + Number(rankings[p.key]), 0);
+      const loves = rated.filter(p => Number(rankings[p.key]) === 4).length;
+      return {
+        gen,
+        total: all.length,
+        rated: rated.length,
+        avg: rated.length ? sum / rated.length : 0,
+        loves,
+        loveRate: rated.length ? loves / rated.length * 100 : 0,
+        completion: all.length ? rated.length / all.length * 100 : 0
+      };
+    });
+
+    const eligibleForAvg = genRows.filter(g => g.rated > 0);
+    const bestAvg = eligibleForAvg.length ? eligibleForAvg.reduce((a,b) => b.avg > a.avg ? b : a) : null;
+    const mostLoves = eligibleForAvg.length ? eligibleForAvg.reduce((a,b) => b.loves > a.loves ? b : a) : null;
+    const bestLoveRate = eligibleForAvg.length ? eligibleForAvg.reduce((a,b) => b.loveRate > a.loveRate ? b : a) : null;
+    const completion = total ? ratedCount / total * 100 : 0;
+
+    const maxAvg = Math.max(4, ...genRows.map(g => g.avg));
+
+    els.statsShell.innerHTML = `
+      <div class="analytics-hero">
+        <div class="analytics-card">
+          <p>Average score</p>
+          <div class="metric-big">${ratedCount ? overallAverage.toFixed(2) : '—'}</div>
+          <div class="metric-sub">Across ${ratedCount.toLocaleString()} rated Pokémon</div>
+        </div>
+        <div class="analytics-card">
+          <p>Favorite generation</p>
+          <div class="metric-big">${bestAvg ? `Gen ${bestAvg.gen}` : '—'}</div>
+          <div class="metric-sub">${bestAvg ? `Highest average: ${bestAvg.avg.toFixed(2)}` : 'Rate Pokémon to calculate'}</div>
+        </div>
+        <div class="analytics-card">
+          <p>Most Love ratings</p>
+          <div class="metric-big">${mostLoves ? `Gen ${mostLoves.gen}` : '—'}</div>
+          <div class="metric-sub">${mostLoves ? `${mostLoves.loves} Pokémon rated 4` : 'No ratings yet'}</div>
+        </div>
+        <div class="analytics-card">
+          <p>Rating completion</p>
+          <div class="metric-big">${completion.toFixed(1)}%</div>
+          <div class="metric-sub">${ratedCount.toLocaleString()} of ${total.toLocaleString()} Pokémon</div>
+        </div>
+      </div>
+
+      <div class="analytics-grid">
+        <div class="analytics-card">
+          <h2>Score distribution</h2>
+          <p>Percentage of your rated Pokémon that received each score.</p>
+          <div class="score-dist">
+            ${[1,2,3,4].map(n => {
+              const pct = ratedCount ? counts[n] / ratedCount * 100 : 0;
+              return `<div class="dist-row">
+                <div class="dist-label">${n} · ${rankLabel(n)}</div>
+                <div class="dist-track"><div class="dist-fill r${n}" style="width:${pct}%"></div></div>
+                <div class="dist-value">${counts[n]} · ${pct.toFixed(1)}%</div>
+              </div>`;
+            }).join('')}
+          </div>
+        </div>
+
+        <div class="analytics-card">
+          <h2>Generation comparison</h2>
+          <p>Average score uses only Pokémon you have rated. Love rate is the percentage of rated Pokémon in that generation scored 4.</p>
+          <div class="gen-table-wrap">
+            <table class="gen-table">
+              <thead><tr><th>Generation</th><th>Rated</th><th>Average</th><th>Love</th><th>Love rate</th><th>Complete</th></tr></thead>
+              <tbody>
+                ${genRows.map(g => `<tr class="${bestAvg && g.gen === bestAvg.gen ? 'best-row' : ''}">
+                  <td><strong>Gen ${g.gen}</strong></td>
+                  <td>${g.rated}/${g.total}</td>
+                  <td>${g.rated ? g.avg.toFixed(2) : '—'} ${g.rated ? `<span class="mini-bar"><span style="width:${Math.min(100, g.avg / maxAvg * 100)}%"></span></span>` : ''}</td>
+                  <td>${g.loves}</td>
+                  <td>${g.rated ? g.loveRate.toFixed(1) + '%' : '—'}</td>
+                  <td>${g.completion.toFixed(1)}%</td>
+                </tr>`).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="analytics-card">
+        <h2>Quick insights</h2>
+        <p>Useful ways to read your preferences as your ratings fill up.</p>
+        <div class="insight-list">
+          <div class="insight"><strong>${bestAvg ? `Gen ${bestAvg.gen}` : '—'}</strong> currently has your highest average score${bestAvg ? ` at ${bestAvg.avg.toFixed(2)}.` : '.'}</div>
+          <div class="insight"><strong>${bestLoveRate ? `Gen ${bestLoveRate.gen}` : '—'}</strong> has your highest Love rate${bestLoveRate ? ` at ${bestLoveRate.loveRate.toFixed(1)}% of the Pokémon you rated in that generation.` : '.'}</div>
+          <div class="insight"><strong>${ratedCount ? (counts[4] / ratedCount * 100).toFixed(1) : '0.0'}%</strong> of all your rated Pokémon are in the Love tier.</div>
+          <div class="insight">Statistics become more comparable as each generation approaches 100% completion. A generation with only a few ratings can temporarily have an unusually high or low average.</div>
+        </div>
+      </div>`;
+  }
+
+  function resetAllProgress() {
+    const ok = window.confirm('Reset ALL ratings and head-to-head comparison progress? This cannot be undone unless you exported a backup first.');
+    if (!ok) return;
+    rankings = {};
+    tournament = null;
+    ui = {
+      activeGen: pokemon[0]?.gen || 'I',
+      mode: 'rate',
+      ratingView: 'grid',
+      singleIndexByGen: {}
+    };
+    els.searchInput.value = '';
+    els.unratedOnly.checked = false;
+    saveJSON(RANK_KEY, rankings);
+    saveJSON(TOURNEY_KEY, tournament);
+    saveJSON(UI_KEY, ui);
+    renderAll();
+    switchMode('rate');
+    toast('All rating and comparison progress was reset.');
   }
 
   function rankLabel(rank) {
@@ -1118,16 +1309,19 @@
   }
 
   async function exportCSV() {
-    // Export only the user's actual ratings. Importing this file later will restore exactly these ratings.
-    const rated = pokemon.filter(p => [1,2,3,4].includes(Number(rankings[p.key])));
+    // Export the complete Pokédex. Unrated Pokémon are kept with a blank rank so Excel can be edited and re-imported later.
     const rows = [['pokedex_number','pokemon_name','generation','rank']];
-    rated.forEach(p => rows.push([p.dex, p.name, p.gen, Number(rankings[p.key])]));
+    pokemon.forEach(p => {
+      const rank = Number(rankings[p.key]);
+      rows.push([p.dex, p.name, p.gen, [1,2,3,4].includes(rank) ? rank : '']);
+    });
     const csv = rows.map(row => row.map(csvCell).join(',')).join('\r\n');
+    const ratedCount = pokemon.filter(p => [1,2,3,4].includes(Number(rankings[p.key]))).length;
 
     try {
       const result = await saveTextFile('\ufeff' + csv, `pokemon-ratings-${dateStamp()}.csv`, 'text/csv;charset=utf-8');
-      if (result === 'picker') toast(`Saved ${rated.length} ratings to CSV.`);
-      else toast(`Download started: ${rated.length} ratings.`);
+      if (result === 'picker') toast(`Saved all ${pokemon.length} Pokémon (${ratedCount} rated) to CSV.`);
+      else toast(`Download started: all ${pokemon.length} Pokémon included.`);
     } catch (err) {
       if (err?.name === 'AbortError') return;
       alert(`Export failed: ${err.message || err}`);
