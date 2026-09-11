@@ -9,10 +9,11 @@
     --bg:#f6f7fb; --card:#fff; --text:#17181c; --muted:#6c707a;
     --line:#e4e6ec; --accent:#111827; --soft:#f0f2f6; --danger:#b42318;
     --good:#087443; --shadow:0 8px 30px rgba(16,24,40,.07);
+    --donate:#eef4ff;
   }
   *{box-sizing:border-box}
   body{margin:0;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg);color:var(--text)}
-  .wrap{max-width:1000px;margin:0 auto;padding:28px 18px 60px}
+  .wrap{max-width:1050px;margin:0 auto;padding:28px 18px 60px}
   header{display:flex;justify-content:space-between;align-items:flex-end;gap:20px;margin-bottom:22px}
   h1{font-size:clamp(28px,4vw,42px);line-height:1.05;margin:0}
   .sub{color:var(--muted);margin:7px 0 0}
@@ -32,17 +33,21 @@
   .secondary{background:var(--soft);color:var(--text)}
   .danger{background:#fff1f0;color:var(--danger)}
   .small{padding:7px 10px;font-size:12px}
-  .people{display:grid;gap:12px;margin-top:16px}
+  .people{display:grid;gap:14px;margin-top:16px}
   .person-card{border:1px solid var(--line);border-radius:15px;padding:14px}
   .person-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}
   .person-name{font-weight:900;font-size:18px}
   .tag{padding:5px 9px;border-radius:999px;font-size:12px;font-weight:800;background:var(--soft)}
+  .money-sections{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .money-box{border:1px solid var(--line);border-radius:13px;padding:12px}
+  .money-box.donation{background:var(--donate)}
   .amount-line{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:10px}
   .amount-line .label{font-size:12px;color:var(--muted);font-weight:800}
-  .amount{font-size:28px;font-weight:950;font-variant-numeric:tabular-nums}
+  .amount{font-size:26px;font-weight:950;font-variant-numeric:tabular-nums}
   .btns{display:grid;grid-template-columns:repeat(5,1fr);gap:7px}
-  .addmoney{background:var(--soft);color:var(--text);padding:10px 6px}
-  .addmoney:hover{background:#e5e7eb}
+  .addmoney{background:var(--soft);color:var(--text);padding:9px 5px}
+  .donation .addmoney{background:#fff}
+  .addmoney:hover{filter:brightness(.97)}
   .person-actions{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
   .settings{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
   .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
@@ -62,9 +67,9 @@
   .hidden{display:none!important}
   .empty{color:var(--muted);font-size:13px;padding:12px 0}
   .footer-note{margin-top:16px;color:var(--muted);font-size:12px;line-height:1.5}
-  @media(max-width:720px){
+  @media(max-width:780px){
     header{align-items:flex-start;flex-direction:column}
-    .add-row,.settings,.summary{grid-template-columns:1fr}
+    .add-row,.settings,.summary,.money-sections{grid-template-columns:1fr}
     .btns{grid-template-columns:repeat(3,1fr)}
     table{font-size:13px}
     th,td{padding:9px 5px}
@@ -76,14 +81,14 @@
   <header>
     <div>
       <h1>Japan Meal Splitter</h1>
-      <p class="sub">Estimate what everyone ate, add tax, and turn cash payments into easy round yen amounts.</p>
+      <p class="sub">Estimate what everyone ate, add extra contributions, and turn cash payments into easy round yen amounts.</p>
     </div>
     <div class="pill">¥ JPY</div>
   </header>
 
   <div class="steps">
     <div class="step active" id="step1">1 · People</div>
-    <div class="step" id="step2">2 · Estimate</div>
+    <div class="step" id="step2">2 · Estimate & contribute</div>
     <div class="step" id="step3">3 · Pay</div>
   </div>
 
@@ -107,18 +112,23 @@
   </section>
 
   <section class="card">
-    <h2>2. Estimate how much each person ate</h2>
-    <p class="hint">Use the quick buttons. You can press a button multiple times to build the estimated amount.</p>
+    <h2>2. How much did everyone eat, and how much do they want to contribute?</h2>
+    <p class="hint">
+      “Ate” is the estimated value of their food. “Extra contribution” means they intentionally pay more, reducing what the rest of the group pays.
+    </p>
     <div id="peopleList" class="people"></div>
   </section>
 
   <section class="card">
-    <h2>3. Tax & cash rounding</h2>
-    <p class="hint">Set the tax and how simple you want the cash payments to be.</p>
+    <h2>3. Payment settings</h2>
+    <p class="hint">Choose how extra contributions reduce the rest of the group, and how simple cash payments should be.</p>
     <div class="settings">
       <div>
-        <label for="taxRate">Tax rate (%)</label>
-        <input id="taxRate" type="number" min="0" max="100" step="0.1" value="10" />
+        <label for="reduceMode">How contributions reduce others</label>
+        <select id="reduceMode">
+          <option value="proportional" selected>Proportionally to what they ate</option>
+          <option value="equal">Equally among the rest</option>
+        </select>
       </div>
       <div>
         <label for="cashUnit">Round cash payments to</label>
@@ -148,12 +158,12 @@
 
   <section class="card hidden" id="resultsCard">
     <h2>Final payment plan</h2>
-    <p class="hint">Cash amounts are rounded. The credit-card side absorbs the remaining restaurant balance, then cash reimbursements settle the difference.</p>
+    <p class="hint">The bill total stays equal to the estimated food total. Extra contributions shift part of that bill away from the rest of the group.</p>
 
     <div class="summary">
-      <div class="metric"><div class="k">Estimated food total</div><div class="v" id="baseTotal">¥0</div></div>
-      <div class="metric"><div class="k">Tax</div><div class="v" id="taxTotal">¥0</div></div>
-      <div class="metric"><div class="k">Total bill</div><div class="v" id="grandTotal">¥0</div></div>
+      <div class="metric"><div class="k">Estimated bill</div><div class="v" id="billTotal">¥0</div></div>
+      <div class="metric"><div class="k">Extra contribution used</div><div class="v" id="donationTotal">¥0</div></div>
+      <div class="metric"><div class="k">Total charged to credit</div><div class="v" id="creditChargeTop">¥0</div></div>
     </div>
 
     <div style="overflow-x:auto">
@@ -162,7 +172,9 @@
           <tr>
             <th>Person</th>
             <th>Method</th>
-            <th class="num">Estimated with tax</th>
+            <th class="num">Ate</th>
+            <th class="num">Extra contribution</th>
+            <th class="num">Final share</th>
             <th class="num">Rounded amount to pay</th>
             <th class="num">Settle afterward</th>
           </tr>
@@ -173,14 +185,14 @@
 
     <div class="summary">
       <div class="metric"><div class="k">Cash paid at restaurant</div><div class="v" id="cashTotal">¥0</div></div>
-      <div class="metric"><div class="k">Total charged to credit</div><div class="v" id="creditCharge">¥0</div></div>
+      <div class="metric"><div class="k">Credit paid at restaurant</div><div class="v" id="creditCharge">¥0</div></div>
       <div class="metric"><div class="k">Cash → credit reimbursements</div><div class="v" id="refundPool">¥0</div></div>
     </div>
 
     <div id="resultMessage"></div>
 
     <p class="footer-note">
-      This is an estimate-based splitter. It intentionally works with rough food amounts instead of exact menu items.
+      If requested extra contributions are larger than the amount owed by the rest of the group, only the usable portion is applied so nobody’s final share becomes negative.
     </p>
   </section>
 </div>
@@ -195,6 +207,24 @@
 
   function setStep(n){
     [1,2,3].forEach(i => $('step'+i).classList.toggle('active', i===n));
+  }
+
+  function moneyButtons(person, field, className=''){
+    const wrap = document.createElement('div');
+    wrap.className = 'btns';
+    increments.forEach(v => {
+      const b = document.createElement('button');
+      b.className = 'addmoney ' + className;
+      b.textContent = '+' + yen(v);
+      b.onclick = () => {
+        person[field] += v;
+        renderPeople();
+        $('resultsCard').classList.add('hidden');
+        setStep(2);
+      };
+      wrap.appendChild(b);
+    });
+    return wrap;
   }
 
   function renderPeople(){
@@ -234,48 +264,54 @@
 
       head.append(left, remove);
 
-      const amountLine = document.createElement('div');
-      amountLine.className = 'amount-line';
-      const lbl = document.createElement('div');
-      lbl.className = 'label';
-      lbl.textContent = 'Estimated food amount';
-      const amt = document.createElement('div');
-      amt.className = 'amount';
-      amt.textContent = yen(p.amount);
-      amountLine.append(lbl, amt);
+      const sections = document.createElement('div');
+      sections.className = 'money-sections';
 
-      const btns = document.createElement('div');
-      btns.className = 'btns';
-      increments.forEach(v => {
-        const b = document.createElement('button');
-        b.className = 'addmoney';
-        b.textContent = '+' + yen(v);
-        b.onclick = () => {
-          p.amount += v;
-          renderPeople();
-          setStep(2);
-        };
-        btns.appendChild(b);
-      });
+      const ateBox = document.createElement('div');
+      ateBox.className = 'money-box';
+      const ateLine = document.createElement('div');
+      ateLine.className = 'amount-line';
+      const ateLabel = document.createElement('div');
+      ateLabel.className = 'label';
+      ateLabel.textContent = 'How much you ate';
+      const ateAmount = document.createElement('div');
+      ateAmount.className = 'amount';
+      ateAmount.textContent = yen(p.ate);
+      ateLine.append(ateLabel, ateAmount);
+      ateBox.append(ateLine, moneyButtons(p,'ate'));
+
+      const donateBox = document.createElement('div');
+      donateBox.className = 'money-box donation';
+      const donateLine = document.createElement('div');
+      donateLine.className = 'amount-line';
+      const donateLabel = document.createElement('div');
+      donateLabel.className = 'label';
+      donateLabel.textContent = 'Extra contribution to the bill';
+      const donateAmount = document.createElement('div');
+      donateAmount.className = 'amount';
+      donateAmount.textContent = yen(p.donate);
+      donateLine.append(donateLabel, donateAmount);
+      donateBox.append(donateLine, moneyButtons(p,'donate'));
+
+      sections.append(ateBox, donateBox);
 
       const actions = document.createElement('div');
       actions.className = 'person-actions';
 
-      const undo = document.createElement('button');
-      undo.className = 'secondary small';
-      undo.textContent = '− ¥100';
-      undo.onclick = () => {
-        p.amount = Math.max(0, p.amount - 100);
-        renderPeople();
-      };
+      const minusAte = document.createElement('button');
+      minusAte.className = 'secondary small';
+      minusAte.textContent = 'Ate −¥100';
+      minusAte.onclick = () => { p.ate = Math.max(0,p.ate-100); renderPeople(); };
+
+      const minusDon = document.createElement('button');
+      minusDon.className = 'secondary small';
+      minusDon.textContent = 'Contribution −¥100';
+      minusDon.onclick = () => { p.donate = Math.max(0,p.donate-100); renderPeople(); };
 
       const clear = document.createElement('button');
       clear.className = 'secondary small';
-      clear.textContent = 'Clear amount';
-      clear.onclick = () => {
-        p.amount = 0;
-        renderPeople();
-      };
+      clear.textContent = 'Clear amounts';
+      clear.onclick = () => { p.ate=0; p.donate=0; renderPeople(); };
 
       const switchPay = document.createElement('button');
       switchPay.className = 'secondary small';
@@ -285,8 +321,8 @@
         renderPeople();
       };
 
-      actions.append(undo, clear, switchPay);
-      card.append(head, amountLine, btns, actions);
+      actions.append(minusAte, minusDon, clear, switchPay);
+      card.append(head, sections, actions);
       box.appendChild(card);
     });
 
@@ -300,7 +336,8 @@
       id: uid(),
       name,
       payment: $('paymentType').value,
-      amount: 0
+      ate: 0,
+      donate: 0
     });
     $('personName').value = '';
     renderPeople();
@@ -313,46 +350,95 @@
     return Math.round(amount/unit)*unit;
   }
 
-  // Makes all whole-yen shares add up exactly to the final total.
-  function allocateWholeYen(rawShares, total){
-    const floors = rawShares.map(Math.floor);
+  function allocateInteger(total, weights){
+    const sum = weights.reduce((a,b)=>a+b,0);
+    if (total <= 0 || sum <= 0) return weights.map(()=>0);
+    const raw = weights.map(w => total*w/sum);
+    const floors = raw.map(Math.floor);
     let left = total - floors.reduce((a,b)=>a+b,0);
-    const order = rawShares
-      .map((v,i)=>({i,frac:v-Math.floor(v)}))
+    const order = raw.map((v,i)=>({i,frac:v-Math.floor(v)}))
       .sort((a,b)=>b.frac-a.frac || a.i-b.i);
     const out = [...floors];
-    for(let i=0;i<left;i++) out[order[i % order.length].i]++;
+    for(let k=0;k<left;k++) out[order[k%order.length].i]++;
     return out;
+  }
+
+  function calculateFinalShares(){
+    const bill = people.reduce((s,p)=>s+p.ate,0);
+    const requestedDonation = people.reduce((s,p)=>s+p.donate,0);
+
+    const donorIdx = people.map((p,i)=>p.donate>0?i:-1).filter(i=>i>=0);
+    const recipientIdx = people.map((p,i)=>p.donate===0?i:-1).filter(i=>i>=0);
+
+    const recipientCapacity = recipientIdx.reduce((s,i)=>s+people[i].ate,0);
+    const usableDonation = Math.min(requestedDonation, recipientCapacity);
+
+    const usedByDonor = people.map(()=>0);
+    if (usableDonation > 0 && donorIdx.length){
+      const donorWeights = donorIdx.map(i=>people[i].donate);
+      const alloc = allocateInteger(usableDonation, donorWeights);
+      donorIdx.forEach((idx,k)=> usedByDonor[idx]=alloc[k]);
+    }
+
+    const reduction = people.map(()=>0);
+    if (usableDonation > 0 && recipientIdx.length){
+      let weights;
+      if ($('reduceMode').value === 'equal'){
+        weights = recipientIdx.map(i=> people[i].ate>0 ? 1 : 0);
+      } else {
+        weights = recipientIdx.map(i=>people[i].ate);
+      }
+      const alloc = allocateInteger(usableDonation, weights);
+      recipientIdx.forEach((idx,k)=> reduction[idx]=Math.min(people[idx].ate, alloc[k]));
+
+      // If capping caused a tiny remainder, redistribute it.
+      let applied = reduction.reduce((a,b)=>a+b,0);
+      let left = usableDonation - applied;
+      while(left > 0){
+        let moved = false;
+        for(const idx of recipientIdx){
+          const room = people[idx].ate - reduction[idx];
+          if(room > 0 && left > 0){
+            reduction[idx]++;
+            left--;
+            moved = true;
+          }
+        }
+        if(!moved) break;
+      }
+    }
+
+    const finalShares = people.map((p,i)=> p.ate + usedByDonor[i] - reduction[i]);
+
+    return {
+      bill,
+      requestedDonation,
+      usableDonation,
+      usedByDonor,
+      reduction,
+      finalShares
+    };
   }
 
   function calculate(){
     if (!people.length) return alert('Please add at least one person.');
-    if (!people.some(p => p.amount > 0)) return alert('Please add estimated food amounts.');
+    if (!people.some(p => p.ate > 0)) return alert('Please add estimated food amounts.');
 
-    const taxRate = Number($('taxRate').value);
     const unit = Number($('cashUnit').value);
     const direction = $('cashDirection').value;
+    const calc = calculateFinalShares();
 
-    if (!Number.isFinite(taxRate) || taxRate < 0) return alert('Please enter a valid tax rate.');
-
-    const baseTotal = people.reduce((s,p)=>s+p.amount,0);
-    const tax = Math.round(baseTotal * taxRate / 100);
-    const grand = baseTotal + tax;
-
-    const rawShares = people.map(p => p.amount * (1 + taxRate/100));
-    const exactShares = allocateWholeYen(rawShares, grand);
-
-    const rows = people.map((p,i) => {
-      const exact = exactShares[i];
-      if (p.payment === 'cash'){
-        const rounded = roundAmount(exact, unit, direction);
-        return {...p, exact, rounded, settlement: exact-rounded};
+    const rows = people.map((p,i)=>{
+      const finalShare = calc.finalShares[i];
+      if(p.payment === 'cash'){
+        const rounded = roundAmount(finalShare, unit, direction);
+        return {...p, usedDonate:calc.usedByDonor[i], reduction:calc.reduction[i], finalShare, rounded, settlement:finalShare-rounded};
       }
-      return {...p, exact, rounded: exact, settlement: 0};
+      return {...p, usedDonate:calc.usedByDonor[i], reduction:calc.reduction[i], finalShare, rounded:finalShare, settlement:0};
     });
 
     const cashAtRestaurant = rows.filter(r=>r.payment==='cash').reduce((s,r)=>s+r.rounded,0);
-    const creditCharge = grand - cashAtRestaurant;
+    const creditCharge = calc.bill - cashAtRestaurant;
 
     const cashOwesCredit = rows
       .filter(r=>r.payment==='cash' && r.settlement>0)
@@ -362,72 +448,90 @@
       .filter(r=>r.payment==='cash' && r.settlement<0)
       .reduce((s,r)=>s-r.settlement,0);
 
-    $('baseTotal').textContent = yen(baseTotal);
-    $('taxTotal').textContent = yen(tax);
-    $('grandTotal').textContent = yen(grand);
+    $('billTotal').textContent = yen(calc.bill);
+    $('donationTotal').textContent = yen(calc.usableDonation);
+    $('creditChargeTop').textContent = yen(Math.max(0,creditCharge));
     $('cashTotal').textContent = yen(cashAtRestaurant);
-    $('creditCharge').textContent = yen(Math.max(0, creditCharge));
+    $('creditCharge').textContent = yen(Math.max(0,creditCharge));
     $('refundPool').textContent = yen(cashOwesCredit);
 
     const tbody = $('resultRows');
     tbody.innerHTML = '';
 
-    rows.forEach(r => {
+    rows.forEach(r=>{
       const tr = document.createElement('tr');
 
       const n = document.createElement('td');
-      n.innerHTML = '<strong></strong><div class="note"></div>';
+      n.innerHTML = '<strong></strong>';
       n.querySelector('strong').textContent = r.name;
-      n.querySelector('.note').textContent = 'Food estimate: ' + yen(r.amount);
 
       const m = document.createElement('td');
-      m.textContent = r.payment === 'cash' ? 'Cash' : 'Credit card';
+      m.textContent = r.payment==='cash'?'Cash':'Credit card';
 
-      const e = document.createElement('td');
-      e.className = 'num money';
-      e.textContent = yen(r.exact);
+      const ate = document.createElement('td');
+      ate.className='num money';
+      ate.textContent=yen(r.ate);
 
-      const rp = document.createElement('td');
-      rp.className = 'num bigpay';
-      rp.textContent = yen(r.rounded);
-
-      const s = document.createElement('td');
-      s.className = 'num';
-      if (r.payment !== 'cash' || r.settlement === 0){
-        s.textContent = '—';
-      } else if (r.settlement > 0){
-        s.innerHTML = `<span class="money">Pay ${yen(r.settlement)}</span><div class="note">to credit payer(s)</div>`;
+      const don = document.createElement('td');
+      don.className='num';
+      if(r.donate>0){
+        don.innerHTML = `<span class="money">${yen(r.usedDonate)}</span>` +
+          (r.usedDonate !== r.donate ? `<div class="note">requested ${yen(r.donate)}</div>` : '');
       } else {
-        s.innerHTML = `<span class="money">Receive ${yen(-r.settlement)}</span><div class="note">from credit payer(s)</div>`;
+        don.textContent='—';
       }
 
-      tr.append(n,m,e,rp,s);
+      const final = document.createElement('td');
+      final.className='num';
+      final.innerHTML=`<span class="money">${yen(r.finalShare)}</span>`;
+      if(r.reduction>0) final.innerHTML += `<div class="note">${yen(r.reduction)} covered by others</div>`;
+
+      const rounded = document.createElement('td');
+      rounded.className='num bigpay';
+      rounded.textContent=yen(r.rounded);
+
+      const settle = document.createElement('td');
+      settle.className='num';
+      if(r.payment!=='cash' || r.settlement===0){
+        settle.textContent='—';
+      } else if(r.settlement>0){
+        settle.innerHTML=`<span class="money">Pay ${yen(r.settlement)}</span><div class="note">to credit payer(s)</div>`;
+      } else {
+        settle.innerHTML=`<span class="money">Receive ${yen(-r.settlement)}</span><div class="note">from credit payer(s)</div>`;
+      }
+
+      tr.append(n,m,ate,don,final,rounded,settle);
       tbody.appendChild(tr);
     });
 
     const creditCount = rows.filter(r=>r.payment==='credit').length;
-    const msg = $('resultMessage');
+    let message = '';
 
-    if (creditCharge > 0 && creditCount === 0){
-      msg.innerHTML = `<div class="warning"><strong>No credit payer selected.</strong> After rounding the cash amounts, ${yen(creditCharge)} is still left to pay.</div>`;
-    } else if (creditCharge < 0){
-      msg.innerHTML = `<div class="warning"><strong>Cash is over the bill by ${yen(-creditCharge)}.</strong> Choose a smaller rounding unit or round down.</div>`;
-    } else {
-      let text = `<strong>Rounded payments are ready.</strong> The restaurant should receive ${yen(cashAtRestaurant)} in cash and ${yen(Math.max(0,creditCharge))} by credit card.`;
-      if (cashOwesCredit) text += ` Cash payers then reimburse the credit payer(s) ${yen(cashOwesCredit)} total.`;
-      if (creditOwesCash) text += ` Credit payer(s) return ${yen(creditOwesCash)} total to cash payer(s) who rounded up.`;
-      msg.innerHTML = `<div class="ok">${text}</div>`;
+    if(calc.requestedDonation > calc.usableDonation){
+      message += `<div class="warning"><strong>Contribution capped.</strong> ${yen(calc.requestedDonation)} was requested, but only ${yen(calc.usableDonation)} can be used because the rest of the group only owes that much.</div>`;
     }
 
+    if(creditCharge > 0 && creditCount === 0){
+      message += `<div class="warning"><strong>No credit payer selected.</strong> After cash rounding, ${yen(creditCharge)} is still left to pay.</div>`;
+    } else if(creditCharge < 0){
+      message += `<div class="warning"><strong>Cash is over the bill by ${yen(-creditCharge)}.</strong> Choose a smaller rounding unit or round down.</div>`;
+    } else {
+      let txt = `<strong>Everything balances.</strong> ${yen(cashAtRestaurant)} is paid in cash and ${yen(Math.max(0,creditCharge))} by credit card.`;
+      if(cashOwesCredit) txt += ` Cash payers then reimburse the credit payer(s) ${yen(cashOwesCredit)} total.`;
+      if(creditOwesCash) txt += ` Credit payer(s) return ${yen(creditOwesCash)} total to cash payer(s) who rounded up.`;
+      message += `<div class="ok">${txt}</div>`;
+    }
+
+    $('resultMessage').innerHTML = message;
     $('resultsCard').classList.remove('hidden');
     setStep(3);
     $('resultsCard').scrollIntoView({behavior:'smooth',block:'start'});
   }
 
   function save(){
-    localStorage.setItem('japanMealSplitterV2', JSON.stringify({
+    localStorage.setItem('japanMealSplitterV3', JSON.stringify({
       people,
-      taxRate:$('taxRate').value,
+      reduceMode:$('reduceMode').value,
       cashUnit:$('cashUnit').value,
       cashDirection:$('cashDirection').value
     }));
@@ -436,33 +540,38 @@
 
   function load(){
     try{
-      const data = JSON.parse(localStorage.getItem('japanMealSplitterV2') || 'null');
+      const data = JSON.parse(localStorage.getItem('japanMealSplitterV3') || 'null');
       if (!data) return;
       people = Array.isArray(data.people) ? data.people : [];
-      if (data.taxRate != null) $('taxRate').value = data.taxRate;
-      if (data.cashUnit) $('cashUnit').value = data.cashUnit;
-      if (data.cashDirection) $('cashDirection').value = data.cashDirection;
+      people = people.map(p=>({
+        id:p.id||uid(),
+        name:p.name||'Person',
+        payment:p.payment==='credit'?'credit':'cash',
+        ate:Number(p.ate)||0,
+        donate:Number(p.donate)||0
+      }));
+      if(data.reduceMode) $('reduceMode').value=data.reduceMode;
+      if(data.cashUnit) $('cashUnit').value=data.cashUnit;
+      if(data.cashDirection) $('cashDirection').value=data.cashDirection;
     }catch(e){}
   }
 
   function reset(){
-    if (!confirm('Reset all people and amounts?')) return;
-    people = [];
-    localStorage.removeItem('japanMealSplitterV2');
-    $('taxRate').value = 10;
-    $('cashUnit').value = 1000;
-    $('cashDirection').value = 'nearest';
+    if(!confirm('Reset all people and amounts?')) return;
+    people=[];
+    localStorage.removeItem('japanMealSplitterV3');
+    $('reduceMode').value='proportional';
+    $('cashUnit').value='1000';
+    $('cashDirection').value='nearest';
     $('resultsCard').classList.add('hidden');
     renderPeople();
   }
 
-  $('addPerson').onclick = addPerson;
-  $('calculate').onclick = calculate;
-  $('save').onclick = save;
-  $('reset').onclick = reset;
-  $('personName').addEventListener('keydown', e => {
-    if (e.key === 'Enter') addPerson();
-  });
+  $('addPerson').onclick=addPerson;
+  $('calculate').onclick=calculate;
+  $('save').onclick=save;
+  $('reset').onclick=reset;
+  $('personName').addEventListener('keydown',e=>{ if(e.key==='Enter') addPerson(); });
 
   load();
   renderPeople();
