@@ -1,0 +1,620 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Japan Meal Splitter</title>
+<style>
+  :root{
+    --bg:#f6f7fb; --card:#fff; --text:#17181c; --muted:#6c707a;
+    --line:#e4e6ec; --accent:#111827; --soft:#f0f2f6; --danger:#b42318;
+    --good:#087443; --shadow:0 8px 30px rgba(16,24,40,.07);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg);color:var(--text)}
+  .wrap{max-width:1080px;margin:0 auto;padding:28px 18px 60px}
+  header{display:flex;justify-content:space-between;align-items:flex-end;gap:20px;margin-bottom:22px}
+  h1{font-size:clamp(28px,4vw,42px);line-height:1.05;margin:0}
+  .sub{color:var(--muted);margin:7px 0 0}
+  .pill{background:var(--accent);color:white;border-radius:999px;padding:8px 12px;font-weight:700;font-size:13px;white-space:nowrap}
+  .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:18px 0 22px}
+  .step{background:#e9ebf0;border-radius:12px;padding:10px 12px;color:#666;font-weight:700;font-size:13px}
+  .step.active{background:var(--accent);color:white}
+  .card{background:var(--card);border:1px solid var(--line);box-shadow:var(--shadow);border-radius:18px;padding:20px;margin:14px 0}
+  .card h2{font-size:20px;margin:0 0 4px}
+  .card .hint{color:var(--muted);font-size:13px;margin:0 0 16px}
+  .row{display:grid;grid-template-columns:1.2fr .9fr auto;gap:10px;align-items:end}
+  label{display:block;font-size:12px;font-weight:800;color:#4f5561;margin:0 0 6px}
+  input, select, button{font:inherit}
+  input,select{width:100%;border:1px solid #cfd3dc;border-radius:10px;padding:10px 11px;background:white;color:var(--text);outline:none}
+  input:focus,select:focus{border-color:#7b8190;box-shadow:0 0 0 3px rgba(17,24,39,.08)}
+  button{border:0;border-radius:10px;padding:10px 14px;font-weight:800;cursor:pointer}
+  .primary{background:var(--accent);color:white}
+  .secondary{background:var(--soft);color:var(--text)}
+  .danger{background:#fff1f0;color:var(--danger)}
+  .small{padding:7px 10px;font-size:12px}
+  .people-list,.dish-list{display:grid;gap:8px;margin-top:14px}
+  .person{display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:center;border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+  .person strong{overflow:hidden;text-overflow:ellipsis}
+  .tag{padding:5px 8px;border-radius:999px;font-size:12px;font-weight:800;background:var(--soft)}
+  .dish-entry{display:grid;grid-template-columns:1.2fr .7fr 1.7fr auto;gap:10px;align-items:end}
+  .checkgrid{display:flex;gap:6px;flex-wrap:wrap;min-height:42px;align-items:center}
+  .personcheck{display:inline-flex;align-items:center;gap:5px;padding:7px 9px;border:1px solid var(--line);border-radius:999px;cursor:pointer;background:#fff;font-size:13px}
+  .personcheck input{width:auto;margin:0}
+  .dish{display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:center;border-bottom:1px solid var(--line);padding:10px 2px}
+  .dish:last-child{border-bottom:0}
+  .dish-meta{font-size:12px;color:var(--muted);margin-top:3px}
+  .settings{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+  .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
+  .summary{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:12px 0}
+  .metric{background:var(--soft);border-radius:14px;padding:14px}
+  .metric .k{font-size:12px;color:var(--muted);font-weight:800}
+  .metric .v{font-size:24px;font-weight:900;margin-top:4px}
+  table{width:100%;border-collapse:collapse;margin-top:12px}
+  th,td{text-align:left;padding:11px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+  td.num, th.num{text-align:right;white-space:nowrap}
+  .money{font-variant-numeric:tabular-nums;font-weight:800}
+  .note{font-size:12px;color:var(--muted);margin-top:3px}
+  .warning{background:#fffaeb;border:1px solid #fedf89;color:#7a2e0e;border-radius:12px;padding:11px 12px;font-size:13px;margin-top:12px}
+  .ok{background:#ecfdf3;border:1px solid #abefc6;color:#05603a;border-radius:12px;padding:11px 12px;font-size:13px;margin-top:12px}
+  .hidden{display:none!important}
+  .empty{color:var(--muted);font-size:13px;padding:12px 0}
+  .footer-note{margin-top:16px;color:var(--muted);font-size:12px;line-height:1.5}
+  @media(max-width:760px){
+    header{align-items:flex-start;flex-direction:column}
+    .row,.dish-entry,.settings,.summary{grid-template-columns:1fr}
+    .person{grid-template-columns:1fr auto}
+    .person .tag{grid-column:1}
+    .dish{grid-template-columns:1fr auto}
+    .dish .dish-price{grid-row:1;grid-column:2}
+    .dish .remove-dish{grid-column:2}
+    table{font-size:13px}
+    th,td{padding:9px 5px}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Japan Meal Splitter</h1>
+      <p class="sub">Split dishes, add tax, round cash to easy yen amounts, and calculate the card remainder.</p>
+    </div>
+    <div class="pill">¥ JPY</div>
+  </header>
+
+  <div class="steps">
+    <div class="step active" id="step1">1 · People</div>
+    <div class="step" id="step2">2 · Dishes</div>
+    <div class="step" id="step3">3 · Results</div>
+  </div>
+
+  <section class="card">
+    <h2>1. Who is eating?</h2>
+    <p class="hint">Add everyone and choose whether they prefer to pay by cash or credit card.</p>
+    <div class="row">
+      <div>
+        <label for="personName">Name</label>
+        <input id="personName" placeholder="e.g. Maya" autocomplete="off" />
+      </div>
+      <div>
+        <label for="paymentType">Payment method</label>
+        <select id="paymentType">
+          <option value="cash">Cash</option>
+          <option value="credit">Credit card</option>
+        </select>
+      </div>
+      <button class="primary" id="addPerson">Add person</button>
+    </div>
+    <div id="peopleList" class="people-list"></div>
+  </section>
+
+  <section class="card">
+    <h2>2. Add dishes</h2>
+    <p class="hint">Enter the price before tax. Select one person, or several people if the dish was shared.</p>
+    <div class="dish-entry">
+      <div>
+        <label for="dishName">Dish</label>
+        <input id="dishName" placeholder="e.g. Ramen" autocomplete="off" />
+      </div>
+      <div>
+        <label for="dishPrice">Price before tax (¥)</label>
+        <input id="dishPrice" type="number" min="0" step="1" inputmode="numeric" placeholder="1200" />
+      </div>
+      <div>
+        <label>Who ordered / shared it?</label>
+        <div class="checkgrid" id="dishPeople"></div>
+      </div>
+      <button class="primary" id="addDish">Add dish</button>
+    </div>
+    <div id="dishList" class="dish-list"></div>
+  </section>
+
+  <section class="card">
+    <h2>3. Tax & cash settings</h2>
+    <p class="hint">Restaurant consumption tax is often 10% in Japan, but you can change it here.</p>
+    <div class="settings">
+      <div>
+        <label for="taxRate">Tax rate (%)</label>
+        <input id="taxRate" type="number" min="0" max="100" step="0.1" value="10" />
+      </div>
+      <div>
+        <label for="taxRounding">Tax rounding</label>
+        <select id="taxRounding">
+          <option value="round">Nearest ¥1</option>
+          <option value="floor">Round down to ¥1</option>
+          <option value="ceil">Round up to ¥1</option>
+        </select>
+      </div>
+      <div>
+        <label for="cashUnit">Cash rounding</label>
+        <select id="cashUnit">
+          <option value="1000">¥1,000</option>
+          <option value="5000">¥5,000</option>
+          <option value="10000">¥10,000</option>
+          <option value="1">No rounding</option>
+        </select>
+      </div>
+    </div>
+    <div class="settings" style="margin-top:12px">
+      <div>
+        <label for="cashDirection">Cash rounding direction</label>
+        <select id="cashDirection">
+          <option value="floor">Round down (cash payer repays the difference)</option>
+          <option value="nearest">Nearest round amount</option>
+          <option value="ceil">Round up</option>
+        </select>
+      </div>
+    </div>
+    <div class="actions">
+      <button class="primary" id="calculate">Calculate split</button>
+      <button class="secondary" id="save">Save in browser</button>
+      <button class="danger" id="reset">Reset all</button>
+    </div>
+  </section>
+
+  <section class="card hidden" id="resultsCard">
+    <h2>Results</h2>
+    <p class="hint">Exact shares include tax. Cash handling shows the rounded cash contribution and any remaining reimbursement.</p>
+
+    <div class="summary">
+      <div class="metric"><div class="k">Before tax</div><div class="v" id="baseTotal">¥0</div></div>
+      <div class="metric"><div class="k">Tax</div><div class="v" id="taxTotal">¥0</div></div>
+      <div class="metric"><div class="k">Grand total</div><div class="v" id="grandTotal">¥0</div></div>
+    </div>
+
+    <div style="overflow-x:auto">
+      <table>
+        <thead>
+          <tr>
+            <th>Person</th>
+            <th>Method</th>
+            <th class="num">Exact share</th>
+            <th class="num">Cash at restaurant</th>
+            <th class="num">Refund / reimbursement</th>
+          </tr>
+        </thead>
+        <tbody id="resultRows"></tbody>
+      </table>
+    </div>
+
+    <div class="summary">
+      <div class="metric"><div class="k">Cash collected at restaurant</div><div class="v" id="cashTotal">¥0</div></div>
+      <div class="metric"><div class="k">Charged to credit cards</div><div class="v" id="creditCharge">¥0</div></div>
+      <div class="metric"><div class="k">Cash payer reimbursements</div><div class="v" id="refundPool">¥0</div></div>
+    </div>
+
+    <div id="creditBreakdown"></div>
+    <div id="resultMessage"></div>
+
+    <p class="footer-note">
+      Note: restaurants can apply tax and rounding differently at the register. This calculator uses the tax rate and rounding rule selected above, then distributes the final whole-yen total so all individual shares add up exactly.
+    </p>
+  </section>
+</div>
+
+<script>
+(() => {
+  let people = [];
+  let dishes = [];
+
+  const $ = id => document.getElementById(id);
+  const yen = n => '¥' + Math.round(n).toLocaleString('en-US');
+  const uid = () => Math.random().toString(36).slice(2, 10);
+
+  function setStep(n){
+    [1,2,3].forEach(i => $('step'+i).classList.toggle('active', i === n));
+  }
+
+  function renderPeople(){
+    const box = $('peopleList');
+    box.innerHTML = '';
+    if (!people.length) {
+      box.innerHTML = '<div class="empty">No people added yet.</div>';
+    } else {
+      people.forEach(p => {
+        const div = document.createElement('div');
+        div.className = 'person';
+
+        const name = document.createElement('strong');
+        name.textContent = p.name;
+
+        const tag = document.createElement('span');
+        tag.className = 'tag';
+        tag.textContent = p.payment === 'cash' ? 'Cash' : 'Credit card';
+
+        const remove = document.createElement('button');
+        remove.className = 'danger small';
+        remove.textContent = 'Remove';
+        remove.onclick = () => {
+          people = people.filter(x => x.id !== p.id);
+          dishes = dishes.map(d => ({...d, peopleIds:d.peopleIds.filter(id => id !== p.id)}))
+                           .filter(d => d.peopleIds.length);
+          renderAll();
+        };
+
+        div.append(name, tag, remove);
+        box.appendChild(div);
+      });
+    }
+    renderDishPeople();
+  }
+
+  function renderDishPeople(){
+    const box = $('dishPeople');
+    box.innerHTML = '';
+    if (!people.length) {
+      const s = document.createElement('span');
+      s.className = 'empty';
+      s.textContent = 'Add people first.';
+      box.appendChild(s);
+      return;
+    }
+    people.forEach(p => {
+      const label = document.createElement('label');
+      label.className = 'personcheck';
+      const cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.value = p.id;
+      const span = document.createElement('span');
+      span.textContent = p.name;
+      label.append(cb, span);
+      box.appendChild(label);
+    });
+  }
+
+  function renderDishes(){
+    const box = $('dishList');
+    box.innerHTML = '';
+    if (!dishes.length) {
+      box.innerHTML = '<div class="empty">No dishes added yet.</div>';
+      return;
+    }
+    dishes.forEach(d => {
+      const selectedNames = d.peopleIds.map(id => people.find(p => p.id === id)?.name).filter(Boolean);
+      const div = document.createElement('div');
+      div.className = 'dish';
+
+      const info = document.createElement('div');
+      const title = document.createElement('strong');
+      title.textContent = d.name;
+      const meta = document.createElement('div');
+      meta.className = 'dish-meta';
+      meta.textContent = selectedNames.length > 1
+        ? `Shared by ${selectedNames.join(', ')}`
+        : `Ordered by ${selectedNames[0] || '—'}`;
+      info.append(title, meta);
+
+      const price = document.createElement('div');
+      price.className = 'dish-price money';
+      price.textContent = yen(d.price);
+
+      const remove = document.createElement('button');
+      remove.className = 'danger small remove-dish';
+      remove.textContent = 'Remove';
+      remove.onclick = () => {
+        dishes = dishes.filter(x => x.id !== d.id);
+        renderDishes();
+      };
+
+      div.append(info, price, remove);
+      box.appendChild(div);
+    });
+  }
+
+  function renderAll(){
+    renderPeople();
+    renderDishes();
+    $('resultsCard').classList.add('hidden');
+    setStep(people.length ? 2 : 1);
+  }
+
+  function addPerson(){
+    const name = $('personName').value.trim();
+    if (!name) return alert('Please enter a name.');
+    people.push({id:uid(), name, payment:$('paymentType').value});
+    $('personName').value = '';
+    renderPeople();
+    setStep(2);
+    $('personName').focus();
+  }
+
+  function addDish(){
+    if (!people.length) return alert('Please add at least one person first.');
+    const name = $('dishName').value.trim();
+    const price = Number($('dishPrice').value);
+    const peopleIds = [...$('dishPeople').querySelectorAll('input:checked')].map(x => x.value);
+    if (!name) return alert('Please enter a dish name.');
+    if (!Number.isFinite(price) || price < 0) return alert('Please enter a valid price.');
+    if (!Number.isInteger(price)) return alert('Please enter the price in whole yen.');
+    if (!peopleIds.length) return alert('Please select who ordered or shared this dish.');
+
+    dishes.push({id:uid(), name, price, peopleIds});
+    $('dishName').value = '';
+    $('dishPrice').value = '';
+    $('dishPeople').querySelectorAll('input').forEach(x => x.checked = false);
+    renderDishes();
+    $('dishName').focus();
+  }
+
+  function roundTax(value, mode){
+    if (mode === 'floor') return Math.floor(value);
+    if (mode === 'ceil') return Math.ceil(value);
+    return Math.round(value);
+  }
+
+  // Allocate an integer total proportionally using the largest-remainder method.
+  function allocateIntegerTotal(weights, total){
+    const weightSum = weights.reduce((a,b)=>a+b,0);
+    if (weightSum <= 0) return weights.map(()=>0);
+
+    const raw = weights.map(w => total * w / weightSum);
+    const floors = raw.map(Math.floor);
+    let left = total - floors.reduce((a,b)=>a+b,0);
+
+    const order = raw.map((v,i)=>({i, frac:v-Math.floor(v)}))
+                     .sort((a,b)=> b.frac-a.frac || a.i-b.i);
+    const out = [...floors];
+    for (let k=0; k<left; k++) out[order[k % order.length].i]++;
+    return out;
+  }
+
+  function cashRound(amount, unit, direction){
+    if (unit <= 1) return amount;
+    if (direction === 'ceil') return Math.ceil(amount/unit)*unit;
+    if (direction === 'nearest') return Math.round(amount/unit)*unit;
+    return Math.floor(amount/unit)*unit;
+  }
+
+  function banknotes(amount){
+    const denominations = [10000,5000,1000];
+    let rest = Math.max(0, Math.round(amount));
+    const parts = [];
+    for (const d of denominations){
+      const count = Math.floor(rest/d);
+      if (count) parts.push(`${count}×${yen(d)}`);
+      rest %= d;
+    }
+    if (rest) parts.push(`${yen(rest)} in coins`);
+    return parts.length ? parts.join(' + ') : '¥0';
+  }
+
+  function calculate(){
+    if (!people.length) return alert('Please add people first.');
+    if (!dishes.length) return alert('Please add at least one dish.');
+
+    const taxRate = Number($('taxRate').value);
+    if (!Number.isFinite(taxRate) || taxRate < 0) return alert('Please enter a valid tax rate.');
+
+    const baseTotal = dishes.reduce((s,d)=>s+d.price,0);
+    const tax = roundTax(baseTotal * taxRate / 100, $('taxRounding').value);
+    const grand = baseTotal + tax;
+
+    const baseShares = people.map(p =>
+      dishes.reduce((sum,d) => {
+        if (!d.peopleIds.includes(p.id)) return sum;
+        return sum + d.price / d.peopleIds.length;
+      }, 0)
+    );
+
+    const exactShares = allocateIntegerTotal(baseShares, grand);
+    const unit = Number($('cashUnit').value);
+    const direction = $('cashDirection').value;
+
+    const rows = people.map((p,i) => {
+      const exact = exactShares[i];
+      let cashAtRestaurant = 0;
+      let settlement = 0; // positive: cash payer owes credit payers. negative: credit side owes cash payer.
+      if (p.payment === 'cash') {
+        cashAtRestaurant = cashRound(exact, unit, direction);
+        settlement = exact - cashAtRestaurant;
+      }
+      return {...p, exact, cashAtRestaurant, settlement};
+    });
+
+    const cashAtRestaurantTotal = rows.reduce((s,r)=>s+r.cashAtRestaurant,0);
+    const creditRestaurantCharge = grand - cashAtRestaurantTotal;
+    const cashOwesCredit = rows.filter(r=>r.payment==='cash' && r.settlement>0).reduce((s,r)=>s+r.settlement,0);
+    const creditOwesCash = rows.filter(r=>r.payment==='cash' && r.settlement<0).reduce((s,r)=>s-r.settlement,0);
+
+    $('baseTotal').textContent = yen(baseTotal);
+    $('taxTotal').textContent = yen(tax);
+    $('grandTotal').textContent = yen(grand);
+    $('cashTotal').textContent = yen(cashAtRestaurantTotal);
+    $('creditCharge').textContent = yen(creditRestaurantCharge);
+    $('refundPool').textContent = yen(cashOwesCredit);
+
+    const tbody = $('resultRows');
+    tbody.innerHTML = '';
+    rows.forEach(r => {
+      const tr = document.createElement('tr');
+
+      const tdName = document.createElement('td');
+      tdName.innerHTML = `<strong></strong>`;
+      tdName.querySelector('strong').textContent = r.name;
+
+      const tdMethod = document.createElement('td');
+      tdMethod.textContent = r.payment === 'cash' ? 'Cash' : 'Credit card';
+
+      const tdExact = document.createElement('td');
+      tdExact.className = 'num money';
+      tdExact.textContent = yen(r.exact);
+
+      const tdCash = document.createElement('td');
+      tdCash.className = 'num';
+      if (r.payment === 'cash') {
+        const top = document.createElement('div');
+        top.className = 'money';
+        top.textContent = yen(r.cashAtRestaurant);
+        const note = document.createElement('div');
+        note.className = 'note';
+        note.textContent = banknotes(r.cashAtRestaurant);
+        tdCash.append(top, note);
+      } else {
+        tdCash.textContent = '—';
+      }
+
+      const tdSettlement = document.createElement('td');
+      tdSettlement.className = 'num';
+      if (r.payment !== 'cash' || r.settlement === 0) {
+        tdSettlement.textContent = r.payment === 'cash' ? 'Settled exactly' : '—';
+      } else if (r.settlement > 0) {
+        const a = document.createElement('div');
+        a.className = 'money';
+        a.textContent = `Repay ${yen(r.settlement)}`;
+        const b = document.createElement('div');
+        b.className = 'note';
+        b.textContent = 'to the credit payer(s)';
+        tdSettlement.append(a,b);
+      } else {
+        const a = document.createElement('div');
+        a.className = 'money';
+        a.textContent = `Receive ${yen(-r.settlement)}`;
+        const b = document.createElement('div');
+        b.className = 'note';
+        b.textContent = 'back from the credit payer(s)';
+        tdSettlement.append(a,b);
+      }
+
+      tr.append(tdName, tdMethod, tdExact, tdCash, tdSettlement);
+      tbody.appendChild(tr);
+    });
+
+    const creditRows = rows.filter(r=>r.payment==='credit');
+    const cb = $('creditBreakdown');
+    cb.innerHTML = '';
+
+    if (creditRows.length) {
+      const creditOwnExact = creditRows.reduce((s,r)=>s+r.exact,0);
+      // Card restaurant charge includes own exact shares + cash shortfalls - cash overpayments.
+      // Allocate the restaurant card charge among credit payers proportional to their own exact shares.
+      const weights = creditRows.map(r => r.exact || 1);
+      const cardSplit = allocateIntegerTotal(weights, Math.max(0, creditRestaurantCharge));
+      const incomingSplit = allocateIntegerTotal(weights, cashOwesCredit);
+      const outgoingSplit = allocateIntegerTotal(weights, creditOwesCash);
+
+      const title = document.createElement('h3');
+      title.textContent = creditRows.length === 1 ? 'Credit payer' : 'Suggested split between credit payers';
+      title.style.margin = '22px 0 6px';
+      cb.appendChild(title);
+
+      const table = document.createElement('table');
+      table.innerHTML = `<thead><tr>
+        <th>Credit payer</th>
+        <th class="num">Card charge at restaurant</th>
+        <th class="num">Receive from cash payers</th>
+        <th class="num">Return to cash payers</th>
+        <th class="num">Net cost after settlement</th>
+      </tr></thead>`;
+      const body = document.createElement('tbody');
+
+      creditRows.forEach((r,i) => {
+        const net = cardSplit[i] - incomingSplit[i] + outgoingSplit[i];
+        const tr = document.createElement('tr');
+        [r.name, yen(cardSplit[i]), yen(incomingSplit[i]), yen(outgoingSplit[i]), yen(net)].forEach((txt,j)=>{
+          const td = document.createElement('td');
+          if (j>0) td.className='num money';
+          td.textContent = txt;
+          tr.appendChild(td);
+        });
+        body.appendChild(tr);
+      });
+      table.appendChild(body);
+      cb.appendChild(table);
+
+      const foot = document.createElement('div');
+      foot.className = 'note';
+      foot.style.marginTop='8px';
+      foot.textContent = creditRows.length > 1
+        ? 'Suggested card charges and settlements are split proportionally between the credit payers.'
+        : 'After the cash reimbursement is received, the credit payer’s net cost returns to their own exact share.';
+      cb.appendChild(foot);
+    }
+
+    const msg = $('resultMessage');
+    msg.innerHTML = '';
+    if (!creditRows.length && creditRestaurantCharge > 0) {
+      msg.innerHTML = `<div class="warning"><strong>No credit payer selected.</strong> Cash rounding leaves ${yen(creditRestaurantCharge)} unpaid at the restaurant. Add a credit payer or choose a cash rounding method that covers the full bill.</div>`;
+    } else if (creditRestaurantCharge < 0) {
+      msg.innerHTML = `<div class="warning"><strong>Cash contributions exceed the bill by ${yen(-creditRestaurantCharge)}.</strong> The restaurant card charge would be zero; use a lower cash rounding setting or return the excess cash.</div>`;
+    } else {
+      const extra = creditOwesCash > 0 ? ` Credit payer(s) should also return ${yen(creditOwesCash)} total to cash payer(s) who rounded up.` : '';
+      msg.innerHTML = `<div class="ok"><strong>Everything balances.</strong> Credit card payment at the restaurant: ${yen(creditRestaurantCharge)}. Cash payers should reimburse credit payer(s) ${yen(cashOwesCredit)} total.${extra}</div>`;
+    }
+
+    $('resultsCard').classList.remove('hidden');
+    setStep(3);
+    $('resultsCard').scrollIntoView({behavior:'smooth', block:'start'});
+  }
+
+  function save(){
+    localStorage.setItem('japanMealSplitter', JSON.stringify({
+      people, dishes,
+      taxRate:$('taxRate').value,
+      taxRounding:$('taxRounding').value,
+      cashUnit:$('cashUnit').value,
+      cashDirection:$('cashDirection').value
+    }));
+    alert('Saved in this browser.');
+  }
+
+  function load(){
+    try{
+      const x = JSON.parse(localStorage.getItem('japanMealSplitter') || 'null');
+      if (!x) return;
+      people = Array.isArray(x.people) ? x.people : [];
+      dishes = Array.isArray(x.dishes) ? x.dishes : [];
+      if (x.taxRate != null) $('taxRate').value = x.taxRate;
+      if (x.taxRounding) $('taxRounding').value = x.taxRounding;
+      if (x.cashUnit) $('cashUnit').value = x.cashUnit;
+      if (x.cashDirection) $('cashDirection').value = x.cashDirection;
+    }catch(e){}
+  }
+
+  function reset(){
+    if (!confirm('Reset all people, dishes, and saved data?')) return;
+    people = [];
+    dishes = [];
+    localStorage.removeItem('japanMealSplitter');
+    $('taxRate').value = 10;
+    $('taxRounding').value = 'round';
+    $('cashUnit').value = '1000';
+    $('cashDirection').value = 'floor';
+    renderAll();
+  }
+
+  $('addPerson').onclick = addPerson;
+  $('addDish').onclick = addDish;
+  $('calculate').onclick = calculate;
+  $('save').onclick = save;
+  $('reset').onclick = reset;
+  $('personName').addEventListener('keydown', e => { if(e.key==='Enter') addPerson(); });
+  $('dishPrice').addEventListener('keydown', e => { if(e.key==='Enter') addDish(); });
+
+  load();
+  renderAll();
+})();
+</script>
+</body>
+</html>
