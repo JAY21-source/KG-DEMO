@@ -44,9 +44,17 @@
   .amount-line{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:10px}
   .amount-line .label{font-size:12px;color:var(--muted);font-weight:800}
   .amount{font-size:26px;font-weight:950;font-variant-numeric:tabular-nums}
-  .btns{display:grid;grid-template-columns:repeat(5,1fr);gap:7px}
+  .btns{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}
   .addmoney{background:var(--soft);color:var(--text);padding:9px 5px}
   .donation .addmoney{background:#fff}
+
+  .collapsible{padding:0;overflow:hidden}
+  .donation-summary{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px;cursor:pointer;list-style:none;font-weight:850}
+  .donation-summary::-webkit-details-marker{display:none}
+  .donation-summary::before{content:'+';font-size:18px;font-weight:900;line-height:1}
+  .collapsible[open] .donation-summary::before{content:'−'}
+  .donation-summary strong{margin-left:auto;font-size:16px}
+  .donation-inner{padding:0 12px 12px}
   .addmoney:hover{filter:brightness(.97)}
   .person-actions{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
   .settings{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
@@ -70,7 +78,7 @@
   @media(max-width:780px){
     header{align-items:flex-start;flex-direction:column}
     .add-row,.settings,.summary,.money-sections{grid-template-columns:1fr}
-    .btns{grid-template-columns:repeat(3,1fr)}
+    .btns{grid-template-columns:repeat(2,1fr)}
     table{font-size:13px}
     th,td{padding:9px 5px}
   }
@@ -114,7 +122,7 @@
   <section class="card">
     <h2>2. How much did everyone eat, and how much do they want to contribute?</h2>
     <p class="hint">
-      “Ate” is the estimated value of their food. “Extra contribution” means they intentionally pay more, reducing what the rest of the group pays.
+      “Ate” is the estimated value of their food. Open “Extra contribution” only when someone wants to intentionally pay more and reduce what the rest of the group pays.
     </p>
     <div id="peopleList" class="people"></div>
   </section>
@@ -203,7 +211,7 @@
   const $ = id => document.getElementById(id);
   const yen = n => '¥' + Math.round(n).toLocaleString('en-US');
   const uid = () => Math.random().toString(36).slice(2,10);
-  const increments = [100,500,1000,5000,10000];
+  const increments = [500,1000,5000,10000];
 
   function setStep(n){
     [1,2,3].forEach(i => $('step'+i).classList.toggle('active', i===n));
@@ -280,18 +288,35 @@
       ateLine.append(ateLabel, ateAmount);
       ateBox.append(ateLine, moneyButtons(p,'ate'));
 
-      const donateBox = document.createElement('div');
-      donateBox.className = 'money-box donation';
+      const donateBox = document.createElement('details');
+      donateBox.className = 'money-box donation collapsible';
+
+      const donateSummary = document.createElement('summary');
+      donateSummary.className = 'donation-summary';
+
+      const donateSummaryLabel = document.createElement('span');
+      donateSummaryLabel.textContent = 'Extra contribution to the bill';
+
+      const donateSummaryAmount = document.createElement('strong');
+      donateSummaryAmount.textContent = yen(p.donate);
+
+      donateSummary.append(donateSummaryLabel, donateSummaryAmount);
+
+      const donateInner = document.createElement('div');
+      donateInner.className = 'donation-inner';
+
       const donateLine = document.createElement('div');
       donateLine.className = 'amount-line';
       const donateLabel = document.createElement('div');
       donateLabel.className = 'label';
-      donateLabel.textContent = 'Extra contribution to the bill';
+      donateLabel.textContent = 'Amount to contribute';
       const donateAmount = document.createElement('div');
       donateAmount.className = 'amount';
       donateAmount.textContent = yen(p.donate);
       donateLine.append(donateLabel, donateAmount);
-      donateBox.append(donateLine, moneyButtons(p,'donate'));
+
+      donateInner.append(donateLine, moneyButtons(p,'donate'));
+      donateBox.append(donateSummary, donateInner);
 
       sections.append(ateBox, donateBox);
 
