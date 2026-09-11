@@ -1,0 +1,1376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Pokémon Favorite Finder</title>
+<style>
+  :root {
+    --bg: #f6f7fb;
+    --panel: #ffffff;
+    --text: #172033;
+    --muted: #687386;
+    --line: #dfe4ec;
+    --accent: #3157d5;
+    --accent-weak: #e9eeff;
+    --danger: #d64545;
+    --meh: #9c7a18;
+    --good: #2a7a55;
+    --love: #c8346f;
+    --shadow: 0 10px 30px rgba(20, 33, 61, .08);
+    --radius: 18px;
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+  }
+  button, input { font: inherit; }
+  button { cursor: pointer; }
+  button:disabled { cursor: not-allowed; opacity: .5; }
+
+  .app { max-width: 1500px; margin: 0 auto; padding: 22px; }
+  .topbar {
+    display: flex; gap: 18px; align-items: flex-start; justify-content: space-between;
+    margin-bottom: 16px;
+  }
+  .title-wrap h1 { margin: 0 0 6px; font-size: clamp(26px, 3vw, 40px); letter-spacing: -.03em; }
+  .subtitle { margin: 0; color: var(--muted); line-height: 1.45; max-width: 820px; }
+  .source-line { margin-top: 8px; color: var(--muted); font-size: 13px; }
+  .source-line a { color: var(--accent); }
+
+  .utility-row { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+  .btn {
+    border: 1px solid var(--line); background: var(--panel); color: var(--text);
+    border-radius: 11px; padding: 9px 12px; font-weight: 650;
+    box-shadow: 0 2px 8px rgba(20,33,61,.04);
+  }
+  .btn:hover { border-color: #bcc6d6; transform: translateY(-1px); }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: white; }
+  .btn.ghost { background: transparent; box-shadow: none; }
+  .btn.danger { color: var(--danger); }
+
+  .mode-tabs {
+    display: flex; gap: 8px; padding: 6px; background: #e9ecf3; border-radius: 14px;
+    width: fit-content; margin: 18px 0;
+  }
+  .mode-tab {
+    border: 0; background: transparent; padding: 10px 15px; border-radius: 10px;
+    font-weight: 800; color: #5c6678;
+  }
+  .mode-tab.active { background: white; color: var(--text); box-shadow: 0 2px 10px rgba(20,33,61,.08); }
+
+  .status-card {
+    background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
+    padding: 16px; box-shadow: var(--shadow); margin-bottom: 16px;
+  }
+  .status-grid { display: grid; grid-template-columns: repeat(5, minmax(100px, 1fr)); gap: 10px; }
+  .stat { padding: 10px 12px; border-radius: 13px; background: #f7f8fb; }
+  .stat strong { display: block; font-size: 21px; }
+  .stat span { color: var(--muted); font-size: 12px; }
+  .progress-track { height: 10px; background: #edf0f5; border-radius: 999px; overflow: hidden; margin-top: 12px; }
+  .progress-fill { height: 100%; background: var(--accent); width: 0; transition: width .25s ease; }
+
+  .generation-tabs {
+    display: flex; gap: 7px; overflow-x: auto; padding: 3px 0 8px; scrollbar-width: thin;
+    margin-bottom: 10px;
+  }
+  .gen-tab {
+    flex: 0 0 auto; border: 1px solid var(--line); background: white; border-radius: 999px;
+    padding: 8px 13px; font-weight: 750; color: #5a6578;
+  }
+  .gen-tab.active { background: var(--accent); color: white; border-color: var(--accent); }
+  .gen-tab .tiny { opacity: .8; font-size: 11px; margin-left: 4px; }
+
+  .toolbar {
+    position: sticky; top: 8px; z-index: 10;
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    padding: 11px; margin-bottom: 14px; background: rgba(246,247,251,.92);
+    backdrop-filter: blur(8px); border: 1px solid var(--line); border-radius: 14px;
+  }
+  .search {
+    flex: 1 1 240px; min-width: 180px; border: 1px solid var(--line); background: white;
+    border-radius: 10px; padding: 9px 12px; outline: none;
+  }
+  .search:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-weak); }
+  .toggle { display: inline-flex; gap: 7px; align-items: center; color: var(--muted); font-size: 14px; }
+
+  .legend { display: flex; flex-wrap: wrap; gap: 7px; margin: 0 0 14px; }
+  .legend-chip { padding: 7px 10px; border-radius: 999px; background: white; border: 1px solid var(--line); font-size: 13px; }
+
+  .rating-view-row {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;
+    margin: 0 0 12px;
+  }
+  .rating-view-switch {
+    display: inline-flex; padding: 4px; gap: 4px; background: #e9edf5; border-radius: 12px;
+  }
+  .rating-view-btn {
+    border: 0; background: transparent; color: #566176; padding: 8px 13px; border-radius: 9px;
+    font-weight: 850;
+  }
+  .rating-view-btn.active { background: white; color: var(--accent); box-shadow: 0 2px 8px rgba(20,33,61,.09); }
+  .keyboard-hint { color: var(--muted); font-size: 13px; }
+  .keycap {
+    display: inline-grid; place-items: center; min-width: 25px; height: 25px; padding: 0 6px;
+    border: 1px solid #cfd5df; border-bottom-width: 2px; background: #fff; border-radius: 6px;
+    font-size: 12px; font-weight: 850; color: #596477;
+  }
+
+  .single-rating-shell {
+    max-width: 620px; margin: 0 auto; background: white; border: 1px solid var(--line);
+    border-radius: 24px; box-shadow: var(--shadow); overflow: hidden;
+  }
+  .single-rating-head {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    padding: 14px 16px; border-bottom: 1px solid var(--line); color: var(--muted); font-size: 13px;
+  }
+  .single-rating-card { text-align: center; padding: 22px clamp(16px, 4vw, 34px) 26px; }
+  .single-rating-card img { width: min(330px, 70vw); height: 330px; object-fit: contain; }
+  .single-rating-card h2 { margin: 7px 0 4px; font-size: 30px; }
+  .single-rating-card .poke-meta { margin-bottom: 18px; }
+  .single-rank-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 9px; }
+  .single-rank-btn {
+    border: 1px solid var(--line); background: #fafbfc; border-radius: 13px; padding: 13px 5px;
+    font-size: 14px; font-weight: 900;
+  }
+  .single-rank-btn:hover { background: white; transform: translateY(-1px); }
+  .single-rank-btn.selected.r1 { color: white; background: var(--danger); border-color: var(--danger); }
+  .single-rank-btn.selected.r2 { color: white; background: var(--meh); border-color: var(--meh); }
+  .single-rank-btn.selected.r3 { color: white; background: var(--good); border-color: var(--good); }
+  .single-rank-btn.selected.r4 { color: white; background: var(--love); border-color: var(--love); }
+  .single-nav {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 17px;
+  }
+  .single-nav .btn { min-width: 105px; }
+
+  .pokemon-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 13px;
+  }
+  .poke-card {
+    background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
+    overflow: hidden; box-shadow: 0 5px 20px rgba(20,33,61,.06); min-width: 0;
+    transition: transform .15s ease, border-color .15s ease, box-shadow .15s ease;
+  }
+  .poke-card:hover { transform: translateY(-2px); box-shadow: 0 10px 25px rgba(20,33,61,.10); }
+  .poke-card.rank-1 { border-color: rgba(214,69,69,.5); }
+  .poke-card.rank-2 { border-color: rgba(156,122,24,.5); }
+  .poke-card.rank-3 { border-color: rgba(42,122,85,.5); }
+  .poke-card.rank-4 { border-color: rgba(200,52,111,.55); box-shadow: 0 7px 25px rgba(200,52,111,.11); }
+
+  .image-wrap {
+    height: 155px; display: grid; place-items: center;
+    background: radial-gradient(circle at 50% 40%, #fff 0, #f8f9fd 55%, #eff2f8 100%);
+    position: relative;
+  }
+  .image-wrap img { width: 118px; height: 118px; object-fit: contain; image-rendering: auto; }
+  .img-placeholder { color: #9aa4b3; font-size: 12px; text-align: center; padding: 20px; }
+  .rating-badge {
+    position: absolute; top: 9px; right: 9px; min-width: 34px; height: 34px; display: grid; place-items: center;
+    border-radius: 50%; color: white; font-weight: 900; box-shadow: 0 3px 10px rgba(0,0,0,.12);
+  }
+  .rating-badge.r1 { background: var(--danger); }
+  .rating-badge.r2 { background: var(--meh); }
+  .rating-badge.r3 { background: var(--good); }
+  .rating-badge.r4 { background: var(--love); }
+
+  .poke-body { padding: 12px; }
+  .poke-name { margin: 0 0 3px; font-size: 18px; line-height: 1.15; }
+  .poke-meta { color: var(--muted); font-size: 12px; margin-bottom: 10px; }
+  .rank-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; }
+  .rank-btn {
+    border: 1px solid var(--line); background: #fafbfc; padding: 8px 3px; border-radius: 9px;
+    font-weight: 850; font-size: 12px;
+  }
+  .rank-btn:hover { background: white; }
+  .rank-btn.selected.r1 { color: white; background: var(--danger); border-color: var(--danger); }
+  .rank-btn.selected.r2 { color: white; background: var(--meh); border-color: var(--meh); }
+  .rank-btn.selected.r3 { color: white; background: var(--good); border-color: var(--good); }
+  .rank-btn.selected.r4 { color: white; background: var(--love); border-color: var(--love); }
+
+  .empty {
+    text-align: center; padding: 48px 20px; color: var(--muted); background: white;
+    border: 1px dashed var(--line); border-radius: var(--radius);
+  }
+
+  .compare-shell {
+    max-width: 1040px; margin: 0 auto; background: white; border: 1px solid var(--line);
+    border-radius: 24px; box-shadow: var(--shadow); padding: clamp(16px, 3vw, 30px);
+  }
+  .compare-top { display: flex; gap: 12px; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; }
+  .compare-top h2 { margin: 0 0 5px; }
+  .compare-note { color: var(--muted); margin: 0; line-height: 1.45; }
+  .compare-progress { margin: 18px 0 6px; }
+  .versus {
+    display: grid; grid-template-columns: 1fr auto 1fr; gap: 18px; align-items: center; margin-top: 22px;
+  }
+  .vs-label { font-weight: 950; color: #9aa4b3; font-size: 18px; }
+  .choice-card {
+    border: 2px solid var(--line); background: #fbfcfe; border-radius: 22px; padding: 16px;
+    text-align: center; transition: .18s ease; min-width: 0;
+  }
+  .choice-card:hover { border-color: var(--accent); transform: translateY(-3px); box-shadow: 0 12px 28px rgba(49,87,213,.12); }
+  .choice-card img { width: min(100%, 330px); height: 330px; object-fit: contain; }
+  .choice-card h3 { margin: 7px 0 3px; font-size: 25px; }
+  .choice-card .meta { color: var(--muted); font-size: 13px; margin-bottom: 12px; }
+  .choose-btn { width: 100%; padding: 11px 14px; border: 0; border-radius: 11px; background: var(--accent); color: white; font-weight: 900; }
+  .swipe-left { animation: swipeLeft .28s ease both; }
+  .swipe-right { animation: swipeRight .28s ease both; }
+  @keyframes swipeLeft { to { opacity: 0; transform: translateX(-60px) rotate(-5deg); } }
+  @keyframes swipeRight { to { opacity: 0; transform: translateX(60px) rotate(5deg); } }
+
+  .winner {
+    text-align: center; padding: 20px 8px 8px;
+  }
+  .winner img { width: min(360px, 80vw); height: 360px; object-fit: contain; }
+  .winner h2 { font-size: 34px; margin: 8px 0 2px; }
+  .winner .crown { font-size: 52px; }
+
+  .loading-overlay {
+    position: fixed; inset: 0; z-index: 1000; display: none; place-items: center;
+    background: rgba(246,247,251,.94); backdrop-filter: blur(4px); padding: 20px;
+  }
+  .loading-overlay.show { display: grid; }
+  .loading-box { background: white; border: 1px solid var(--line); border-radius: 18px; box-shadow: var(--shadow); padding: 24px; max-width: 520px; width: 100%; text-align: center; }
+  .spinner { width: 34px; height: 34px; margin: 0 auto 14px; border-radius: 50%; border: 4px solid #e6e9f0; border-top-color: var(--accent); animation: spin .8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .error-box { color: var(--danger); background: #fff5f5; border: 1px solid #f0caca; border-radius: 12px; padding: 12px; margin-top: 12px; text-align: left; display: none; }
+
+  .toast {
+    position: fixed; right: 18px; bottom: 18px; z-index: 1200; background: #182033; color: white;
+    padding: 11px 14px; border-radius: 11px; box-shadow: 0 8px 25px rgba(0,0,0,.2);
+    opacity: 0; transform: translateY(10px); pointer-events: none; transition: .2s ease;
+  }
+  .toast.show { opacity: 1; transform: translateY(0); }
+
+  .small { font-size: 12px; color: var(--muted); }
+  .warning { color: #8b6512; background: #fff9e8; border: 1px solid #eadba6; padding: 10px 12px; border-radius: 11px; margin-top: 10px; }
+  .hidden { display: none !important; }
+
+  @media (max-width: 850px) {
+    .topbar { flex-direction: column; }
+    .utility-row { justify-content: flex-start; }
+    .status-grid { grid-template-columns: repeat(2, 1fr); }
+    .versus { grid-template-columns: 1fr; }
+    .vs-label { text-align: center; }
+    .choice-card img { height: 280px; }
+  }
+  @media (max-width: 520px) {
+    .app { padding: 13px; }
+    .pokemon-grid { grid-template-columns: repeat(2, minmax(0,1fr)); gap: 9px; }
+    .image-wrap { height: 125px; }
+    .image-wrap img { width: 92px; height: 92px; }
+    .poke-body { padding: 9px; }
+    .poke-name { font-size: 15px; }
+    .rank-btn { font-size: 11px; padding: 7px 1px; }
+    .single-rating-card img { height: 245px; }
+    .single-rating-card h2 { font-size: 25px; }
+    .single-rank-btn { padding: 11px 3px; font-size: 12px; }
+    .single-nav { align-items: stretch; flex-direction: column; }
+    .status-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+</style>
+</head>
+<body>
+<div class="loading-overlay show" id="loadingOverlay">
+  <div class="loading-box">
+    <div class="spinner" id="spinner"></div>
+    <h2 id="loadingTitle">Loading Pokémon from Bulbapedia…</h2>
+    <p id="loadingText" class="subtitle">The Pokémon list, Pokédex numbers, generations and images are read directly from Bulbapedia and then cached in your browser.</p>
+    <div class="error-box" id="loadError"></div>
+    <button class="btn primary hidden" id="retryBtn">Retry</button>
+  </div>
+</div>
+
+<div class="app">
+  <header class="topbar">
+    <div class="title-wrap">
+      <h1>Pokémon Favorite Finder</h1>
+      <p class="subtitle">First rate every Pokémon from 1–4. Then let your “Love” Pokémon fight head-to-head until one favorite remains.</p>
+      <div class="source-line" id="sourceLine">Source: Bulbapedia</div>
+    </div>
+    <div class="utility-row">
+      <button class="btn" id="importBtn">Import progress</button>
+      <button class="btn" id="exportCsvBtn">Export progress (.csv)</button>
+      <button class="btn" id="backupBtn">Export full backup (.json)</button>
+      <button class="btn ghost" id="refreshDataBtn" title="Reload names, numbers, generations and images from Bulbapedia">Refresh Bulbapedia data</button>
+      <input type="file" id="fileInput" accept=".csv,.json,text/csv,application/json" class="hidden" />
+    </div>
+  </header>
+
+  <div class="mode-tabs">
+    <button class="mode-tab active" data-mode="rate">1. Rate 1–4</button>
+    <button class="mode-tab" data-mode="compare">2. Find my favorite</button>
+  </div>
+
+  <section id="rateView">
+    <div class="status-card">
+      <div class="status-grid">
+        <div class="stat"><strong id="ratedCount">0</strong><span>Rated</span></div>
+        <div class="stat"><strong id="unratedCount">0</strong><span>Unrated</span></div>
+        <div class="stat"><strong id="loveCount">0</strong><span>Love (4)</span></div>
+        <div class="stat"><strong id="overallPercent">0%</strong><span>Overall progress</span></div>
+        <div class="stat"><strong id="genPercent">0%</strong><span>Current generation</span></div>
+      </div>
+      <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+    </div>
+
+    <div class="generation-tabs" id="generationTabs"></div>
+
+    <div class="rating-view-row">
+      <div class="rating-view-switch" aria-label="Rating display mode">
+        <button class="rating-view-btn active" data-rating-view="grid">All Pokémon</button>
+        <button class="rating-view-btn" data-rating-view="single">One by one</button>
+      </div>
+      <div class="keyboard-hint" id="ratingKeyboardHint"></div>
+    </div>
+
+    <div class="toolbar" id="gridToolbar">
+      <input class="search" type="search" id="searchInput" placeholder="Search this generation…" />
+      <label class="toggle"><input type="checkbox" id="unratedOnly" /> Unrated only</label>
+      <button class="btn" id="clearSearchBtn">Clear filter</button>
+      <span class="small" id="visibleCount"></span>
+    </div>
+
+    <div class="legend">
+      <span class="legend-chip">1 = No</span>
+      <span class="legend-chip">2 = Meh</span>
+      <span class="legend-chip">3 = Good</span>
+      <span class="legend-chip">4 = Love</span>
+      <span class="legend-chip">Your choices auto-save</span>
+    </div>
+
+    <div id="pokemonGrid" class="pokemon-grid"></div>
+    <div id="singleRating" class="single-rating-shell hidden"></div>
+  </section>
+
+  <section id="compareView" class="hidden">
+    <div class="compare-shell" id="compareShell"></div>
+  </section>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(() => {
+  'use strict';
+
+  const API = 'https://bulbapedia.bulbagarden.net/w/api.php';
+  const LIST_PAGE = 'List of Pokémon by National Pokédex number';
+  const LIST_URL = 'https://bulbapedia.bulbagarden.net/wiki/List_of_Pok%C3%A9mon_by_National_Pok%C3%A9dex_number';
+  const CACHE_KEY = 'pokemonFavoriteFinder_source_v4';
+  const RANK_KEY = 'pokemonFavoriteFinder_rankings_v3';
+  const TOURNEY_KEY = 'pokemonFavoriteFinder_tournament_v3';
+  const UI_KEY = 'pokemonFavoriteFinder_ui_v2';
+  const ROMANS = ['I','II','III','IV','V','VI','VII','VIII','IX','X'];
+
+  let pokemon = [];
+  let rankings = loadExistingRankings();
+  let tournament = loadJSON(TOURNEY_KEY, null);
+  let ui = loadJSON(UI_KEY, { activeGen: 'I', mode: 'rate', ratingView: 'grid', singleIndexByGen: {} });
+  let sourceFetchedAt = null;
+  let toastTimer = null;
+  let compareInputLocked = false;
+
+  const $ = (sel, root = document) => root.querySelector(sel);
+  const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
+
+  const els = {
+    loadingOverlay: $('#loadingOverlay'),
+    spinner: $('#spinner'),
+    loadingTitle: $('#loadingTitle'),
+    loadingText: $('#loadingText'),
+    loadError: $('#loadError'),
+    retryBtn: $('#retryBtn'),
+    sourceLine: $('#sourceLine'),
+    generationTabs: $('#generationTabs'),
+    pokemonGrid: $('#pokemonGrid'),
+    singleRating: $('#singleRating'),
+    gridToolbar: $('#gridToolbar'),
+    ratingKeyboardHint: $('#ratingKeyboardHint'),
+    ratedCount: $('#ratedCount'),
+    unratedCount: $('#unratedCount'),
+    loveCount: $('#loveCount'),
+    overallPercent: $('#overallPercent'),
+    genPercent: $('#genPercent'),
+    progressFill: $('#progressFill'),
+    searchInput: $('#searchInput'),
+    unratedOnly: $('#unratedOnly'),
+    clearSearchBtn: $('#clearSearchBtn'),
+    visibleCount: $('#visibleCount'),
+    rateView: $('#rateView'),
+    compareView: $('#compareView'),
+    compareShell: $('#compareShell'),
+    importBtn: $('#importBtn'),
+    exportCsvBtn: $('#exportCsvBtn'),
+    backupBtn: $('#backupBtn'),
+    refreshDataBtn: $('#refreshDataBtn'),
+    fileInput: $('#fileInput'),
+    toast: $('#toast')
+  };
+
+  function loadJSON(key, fallback) {
+    try {
+      const raw = localStorage.getItem(key);
+      return raw ? JSON.parse(raw) : fallback;
+    } catch { return fallback; }
+  }
+
+  function loadExistingRankings() {
+    // Keep the current storage key first, but also recover progress from older builds if present.
+    const keys = [RANK_KEY, 'pokemonFavoriteFinder_rankings_v2', 'pokemonFavoriteFinder_rankings_v1'];
+    for (const key of keys) {
+      const data = loadJSON(key, null);
+      if (data && typeof data === 'object' && !Array.isArray(data) && Object.keys(data).length) return data;
+    }
+    return {};
+  }
+
+  function saveJSON(key, value) {
+    try { localStorage.setItem(key, JSON.stringify(value)); } catch (e) { console.warn('Local save failed', e); }
+  }
+
+  function normalizeUrl(src, base = 'https://bulbapedia.bulbagarden.net') {
+    if (!src) return '';
+    if (src.startsWith('//')) return 'https:' + src;
+    try { return new URL(src, base).href; } catch { return src; }
+  }
+
+  function text(el) { return (el?.textContent || '').replace(/\s+/g, ' ').trim(); }
+
+  function romanFromHeading(s) {
+    const m = s.match(/Generation\s+(I{1,3}|IV|V|VI{0,3}|IX|X)\b/i);
+    return m ? m[1].toUpperCase() : null;
+  }
+
+  function parseBulbapediaList(html) {
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const result = [];
+    const headings = $$('h3', doc).filter(h => /Generation\s+/i.test(text(h)));
+
+    for (const heading of headings) {
+      const gen = romanFromHeading(text(heading));
+      if (!gen || !ROMANS.includes(gen)) continue;
+
+      // MediaWiki may wrap the <h3> inside a .mw-heading container.
+      const headingBlock = heading.closest('.mw-heading') || heading;
+      let node = headingBlock.nextElementSibling;
+      let table = null;
+      while (node && !/^H[1-3]$/.test(node.tagName)) {
+        if (node.tagName === 'TABLE') { table = node; break; }
+        const nested = node.querySelector?.('table');
+        if (nested) { table = nested; break; }
+        node = node.nextElementSibling;
+      }
+      if (!table) continue;
+
+      for (const tr of $$('tr', table)) {
+        const cells = [...tr.children].filter(c => c.tagName === 'TD' || c.tagName === 'TH');
+        if (cells.length < 3) continue;
+
+        const dexRaw = text(cells[0]).replace(/\s/g, '');
+        if (!/^#(?:\d{4}|\?{4})$/.test(dexRaw)) continue; // skips alternate forms, which have a blank Ndex cell
+
+        const nameCell = cells[2];
+        const nameLink = $$('a', nameCell).find(a => text(a)) || null;
+        const name = text(nameLink || nameCell).replace(/\s*\[[^\]]+\]\s*$/, '').trim();
+        if (!name) continue;
+
+        const dex = dexRaw.slice(1);
+        const img = cells[1]?.querySelector('img');
+        const sprite = normalizeUrl(
+          img?.getAttribute('src') || img?.getAttribute('data-src') || (img?.getAttribute('srcset') || '').split(' ')[0] || ''
+        );
+
+        let pageTitle = `${name} (Pokémon)`;
+        const href = nameLink?.getAttribute('href') || '';
+        if (href.includes('/wiki/')) {
+          try {
+            pageTitle = decodeURIComponent(href.split('/wiki/')[1].split('#')[0]).replace(/_/g, ' ');
+          } catch {}
+        }
+
+        const key = dex === '????' ? `genx:${name.toLowerCase()}` : `dex:${dex}`;
+        result.push({ key, dex, name, gen, sprite, image: '', pageTitle });
+      }
+    }
+
+    // Deduplicate species rows defensively.
+    const seen = new Set();
+    return result.filter(p => {
+      const k = `${p.gen}|${p.dex}|${p.name}`;
+      if (seen.has(k)) return false;
+      seen.add(k);
+      return true;
+    });
+  }
+
+  async function fetchBulbapediaData(force = false) {
+    if (!force) {
+      const cached = loadJSON(CACHE_KEY, null);
+      if (cached?.pokemon?.length >= 1000) {
+        pokemon = cached.pokemon;
+        sourceFetchedAt = cached.fetchedAt || null;
+        return;
+      }
+    }
+
+    setLoading(true, 'Loading Pokémon from Bulbapedia…', 'Reading the National Pokédex list and image references directly from Bulbapedia.');
+    const params = new URLSearchParams({
+      action: 'parse',
+      page: LIST_PAGE,
+      prop: 'text',
+      format: 'json',
+      origin: '*'
+    });
+    const res = await fetch(`${API}?${params.toString()}`, { mode: 'cors' });
+    if (!res.ok) throw new Error(`Bulbapedia returned HTTP ${res.status}.`);
+    const json = await res.json();
+    if (json.error) throw new Error(json.error.info || 'Bulbapedia API error.');
+    const html = json?.parse?.text?.['*'];
+    if (!html) throw new Error('Could not read the Bulbapedia list page.');
+
+    const parsed = parseBulbapediaList(html);
+    if (parsed.length < 1000) throw new Error(`Only ${parsed.length} Pokémon were found. The Bulbapedia page format may have changed.`);
+
+    pokemon = parsed;
+    sourceFetchedAt = new Date().toISOString();
+    saveJSON(CACHE_KEY, { fetchedAt: sourceFetchedAt, pokemon });
+  }
+
+  async function ensureLargeImages(items) {
+    const need = items.filter(p => p && !p.image);
+    if (!need.length) return;
+
+    const titles = [...new Set(need.map(p => p.pageTitle))];
+    const params = new URLSearchParams({
+      action: 'query',
+      prop: 'pageimages',
+      piprop: 'thumbnail',
+      pithumbsize: '500',
+      titles: titles.join('|'),
+      redirects: '1',
+      format: 'json',
+      formatversion: '2',
+      origin: '*'
+    });
+
+    try {
+      const res = await fetch(`${API}?${params.toString()}`, { mode: 'cors' });
+      const json = await res.json();
+      const pages = json?.query?.pages || [];
+      const imageByTitle = new Map();
+      pages.forEach(pg => {
+        if (pg?.title && pg?.thumbnail?.source) imageByTitle.set(pg.title, normalizeUrl(pg.thumbnail.source));
+      });
+
+      for (const p of need) {
+        const exact = imageByTitle.get(p.pageTitle);
+        if (exact) p.image = exact;
+      }
+
+      // If redirects/normalization changed titles, use response order as a limited fallback.
+      if (pages.length === titles.length) {
+        titles.forEach((title, i) => {
+          const pgs = pages[i];
+          if (!pgs?.thumbnail?.source) return;
+          need.filter(p => p.pageTitle === title && !p.image).forEach(p => p.image = normalizeUrl(pgs.thumbnail.source));
+        });
+      }
+
+      saveJSON(CACHE_KEY, { fetchedAt: sourceFetchedAt, pokemon });
+    } catch (e) {
+      console.warn('Large image lookup failed; using Bulbapedia menu sprites instead.', e);
+    }
+  }
+
+  function setLoading(show, title, message, error = '') {
+    els.loadingOverlay.classList.toggle('show', show);
+    if (title) els.loadingTitle.textContent = title;
+    if (message) els.loadingText.textContent = message;
+    els.loadError.style.display = error ? 'block' : 'none';
+    els.loadError.textContent = error;
+    els.retryBtn.classList.toggle('hidden', !error);
+    els.spinner.classList.toggle('hidden', !!error);
+  }
+
+  function initAfterData() {
+    // Keep rankings that still map to current species. Old data is not deleted so future refreshes can recover it.
+    if (!ROMANS.includes(ui.activeGen) || !pokemon.some(p => p.gen === ui.activeGen)) ui.activeGen = pokemon[0]?.gen || 'I';
+    if (!['grid','single'].includes(ui.ratingView)) ui.ratingView = 'grid';
+    if (!ui.singleIndexByGen || typeof ui.singleIndexByGen !== 'object') ui.singleIndexByGen = {};
+    renderGenerationTabs();
+    bindUI();
+    switchMode(ui.mode || 'rate');
+    renderAll();
+    updateSourceLine();
+    setLoading(false);
+  }
+
+  function updateSourceLine() {
+    const genXUnknown = pokemon.filter(p => p.gen === 'X' && p.dex === '????').length;
+    const fetched = sourceFetchedAt ? ` · cached ${new Date(sourceFetchedAt).toLocaleDateString()}` : '';
+    els.sourceLine.innerHTML = `Source: <a href="${LIST_URL}" target="_blank" rel="noopener">Bulbapedia National Pokédex list</a> · ${pokemon.length.toLocaleString()} species${fetched}` +
+      (genXUnknown ? ` · Generation X currently has ${genXUnknown} species with #???? on Bulbapedia` : '');
+  }
+
+  let uiBound = false;
+  function bindUI() {
+    if (uiBound) return;
+    uiBound = true;
+
+    $$('.mode-tab').forEach(btn => btn.addEventListener('click', () => switchMode(btn.dataset.mode)));
+    $$('.rating-view-btn').forEach(btn => btn.addEventListener('click', () => switchRatingView(btn.dataset.ratingView)));
+    document.addEventListener('keydown', handleKeyboardShortcuts);
+    els.searchInput.addEventListener('input', renderGrid);
+    els.unratedOnly.addEventListener('change', renderGrid);
+    els.clearSearchBtn.addEventListener('click', () => {
+      els.searchInput.value = '';
+      els.unratedOnly.checked = false;
+      renderGrid();
+    });
+
+    els.importBtn.addEventListener('click', openImportPicker);
+    els.fileInput.addEventListener('change', importFile);
+    els.exportCsvBtn.addEventListener('click', exportCSV);
+    els.backupBtn.addEventListener('click', exportBackup);
+    els.refreshDataBtn.addEventListener('click', async () => {
+      try {
+        setLoading(true, 'Refreshing Bulbapedia data…', 'Your ratings will be preserved while the source list is refreshed.');
+        await fetchBulbapediaData(true);
+        renderGenerationTabs();
+        renderAll();
+        updateSourceLine();
+        toast('Bulbapedia data refreshed.');
+        setLoading(false);
+      } catch (e) {
+        setLoading(true, 'Could not refresh Bulbapedia', 'Your saved ratings were not changed.', String(e.message || e));
+      }
+    });
+
+    els.retryBtn.addEventListener('click', boot);
+  }
+
+  function switchMode(mode) {
+    ui.mode = mode;
+    saveJSON(UI_KEY, ui);
+    $$('.mode-tab').forEach(btn => btn.classList.toggle('active', btn.dataset.mode === mode));
+    els.rateView.classList.toggle('hidden', mode !== 'rate');
+    els.compareView.classList.toggle('hidden', mode !== 'compare');
+    if (mode === 'rate') renderRatingView();
+    if (mode === 'compare') renderCompare();
+  }
+
+  function renderAll() {
+    renderStats();
+    renderGenerationTabs();
+    renderRatingView();
+    if (ui.mode === 'compare') renderCompare();
+  }
+
+  function switchRatingView(view) {
+    if (!['grid','single'].includes(view)) return;
+    ui.ratingView = view;
+    if (view === 'single') ensureSingleIndex();
+    saveJSON(UI_KEY, ui);
+    renderRatingView();
+  }
+
+  function renderRatingView() {
+    const single = ui.ratingView === 'single';
+    $$('.rating-view-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.ratingView === ui.ratingView));
+    els.gridToolbar.classList.toggle('hidden', single);
+    els.pokemonGrid.classList.toggle('hidden', single);
+    els.singleRating.classList.toggle('hidden', !single);
+    els.ratingKeyboardHint.innerHTML = single
+      ? `Keyboard: <span class="keycap">1</span> <span class="keycap">2</span> <span class="keycap">3</span> <span class="keycap">4</span> to rate`
+      : '';
+    if (single) renderSingleRating();
+    else renderGrid();
+  }
+
+  function renderGenerationTabs() {
+    const gens = ROMANS.filter(gen => pokemon.some(p => p.gen === gen));
+    els.generationTabs.innerHTML = gens.map(gen => {
+      const list = pokemon.filter(p => p.gen === gen);
+      const rated = list.filter(p => rankings[p.key]).length;
+      return `<button class="gen-tab ${ui.activeGen === gen ? 'active' : ''}" data-gen="${gen}">Gen ${gen}<span class="tiny">${rated}/${list.length}</span></button>`;
+    }).join('');
+
+    $$('.gen-tab', els.generationTabs).forEach(btn => btn.addEventListener('click', () => {
+      ui.activeGen = btn.dataset.gen;
+      saveJSON(UI_KEY, ui);
+      els.searchInput.value = '';
+      els.unratedOnly.checked = false;
+      ensureSingleIndex();
+      renderGenerationTabs();
+      renderStats();
+      renderRatingView();
+      window.scrollTo({ top: Math.max(0, els.generationTabs.offsetTop - 10), behavior: 'smooth' });
+    }));
+  }
+
+  function renderStats() {
+    const rated = pokemon.filter(p => [1,2,3,4].includes(Number(rankings[p.key]))).length;
+    const love = pokemon.filter(p => Number(rankings[p.key]) === 4).length;
+    const total = pokemon.length;
+    const current = pokemon.filter(p => p.gen === ui.activeGen);
+    const currentRated = current.filter(p => rankings[p.key]).length;
+    const pct = total ? Math.round(rated / total * 100) : 0;
+    const gpct = current.length ? Math.round(currentRated / current.length * 100) : 0;
+
+    els.ratedCount.textContent = rated.toLocaleString();
+    els.unratedCount.textContent = Math.max(0, total - rated).toLocaleString();
+    els.loveCount.textContent = love.toLocaleString();
+    els.overallPercent.textContent = `${pct}%`;
+    els.genPercent.textContent = `${gpct}%`;
+    els.progressFill.style.width = `${pct}%`;
+  }
+
+  function rankLabel(rank) {
+    return ({1:'No',2:'Meh',3:'Good',4:'Love'})[rank] || '';
+  }
+
+  function renderGrid() {
+    const q = els.searchInput.value.trim().toLowerCase();
+    const unratedOnly = els.unratedOnly.checked;
+    let list = pokemon.filter(p => p.gen === ui.activeGen);
+    if (q) list = list.filter(p => p.name.toLowerCase().includes(q) || p.dex.includes(q.replace('#','')));
+    if (unratedOnly) list = list.filter(p => !rankings[p.key]);
+
+    els.visibleCount.textContent = `${list.length} shown`;
+    if (!list.length) {
+      els.pokemonGrid.innerHTML = `<div class="empty" style="grid-column:1/-1">No Pokémon match this filter.</div>`;
+      return;
+    }
+
+    els.pokemonGrid.innerHTML = list.map(p => {
+      const r = Number(rankings[p.key]) || 0;
+      const image = p.sprite || p.image;
+      const dexText = p.dex === '????' ? '#????' : `#${p.dex}`;
+      return `
+        <article class="poke-card ${r ? `rank-${r}` : ''}" data-key="${escapeAttr(p.key)}">
+          <div class="image-wrap">
+            ${image ? `<img loading="lazy" src="${escapeAttr(image)}" alt="${escapeAttr(p.name)}" onerror="this.style.display='none';this.nextElementSibling.style.display='block'"/><div class="img-placeholder" style="display:none">Image unavailable</div>` : `<div class="img-placeholder">Image unavailable</div>`}
+            ${r ? `<div class="rating-badge r${r}" title="${rankLabel(r)}">${r}</div>` : ''}
+          </div>
+          <div class="poke-body">
+            <h3 class="poke-name">${escapeHTML(p.name)}</h3>
+            <div class="poke-meta">${dexText} · Generation ${p.gen}</div>
+            <div class="rank-row">
+              ${[1,2,3,4].map(n => `<button class="rank-btn r${n} ${r===n?'selected':''}" data-rank="${n}" title="${rankLabel(n)}">${n}<span class="hidden-mobile"> ${rankLabel(n)}</span></button>`).join('')}
+            </div>
+          </div>
+        </article>`;
+    }).join('');
+
+    $$('.poke-card', els.pokemonGrid).forEach(card => {
+      $$('.rank-btn', card).forEach(btn => btn.addEventListener('click', () => setRank(card.dataset.key, Number(btn.dataset.rank))));
+    });
+  }
+
+  function generationList() {
+    return pokemon.filter(p => p.gen === ui.activeGen);
+  }
+
+  function ensureSingleIndex() {
+    const list = generationList();
+    if (!list.length) return 0;
+    let idx = Number(ui.singleIndexByGen?.[ui.activeGen]);
+    if (!Number.isInteger(idx) || idx < 0 || idx >= list.length) {
+      const firstUnrated = list.findIndex(p => ![1,2,3,4].includes(Number(rankings[p.key])));
+      idx = firstUnrated >= 0 ? firstUnrated : 0;
+      ui.singleIndexByGen[ui.activeGen] = idx;
+      saveJSON(UI_KEY, ui);
+    }
+    return idx;
+  }
+
+  function currentSinglePokemon() {
+    const list = generationList();
+    if (!list.length) return null;
+    return list[ensureSingleIndex()] || list[0];
+  }
+
+  function moveSingle(delta) {
+    const list = generationList();
+    if (!list.length) return;
+    const current = ensureSingleIndex();
+    const next = Math.max(0, Math.min(list.length - 1, current + delta));
+    ui.singleIndexByGen[ui.activeGen] = next;
+    saveJSON(UI_KEY, ui);
+    renderSingleRating();
+  }
+
+  function renderSingleRating() {
+    const list = generationList();
+    if (!list.length) {
+      els.singleRating.innerHTML = `<div class="empty">No Pokémon in this generation.</div>`;
+      return;
+    }
+
+    const idx = ensureSingleIndex();
+    const p = list[idx];
+    const r = Number(rankings[p.key]) || 0;
+    const image = p.image || p.sprite;
+    const dexText = p.dex === '????' ? '#????' : `#${p.dex}`;
+    const unrated = list.filter(x => ![1,2,3,4].includes(Number(rankings[x.key]))).length;
+
+    els.singleRating.innerHTML = `
+      <div class="single-rating-head">
+        <span>Gen ${escapeHTML(ui.activeGen)} · ${idx + 1} of ${list.length}</span>
+        <span>${unrated} unrated in this generation</span>
+      </div>
+      <div class="single-rating-card">
+        ${image ? `<img src="${escapeAttr(image)}" alt="${escapeAttr(p.name)}" onerror="this.style.display='none';this.nextElementSibling.style.display='grid'"/><div class="img-placeholder" style="display:none;height:330px;place-items:center">Image unavailable</div>` : `<div class="img-placeholder" style="height:330px;display:grid;place-items:center">Image unavailable</div>`}
+        <h2>${escapeHTML(p.name)}</h2>
+        <div class="poke-meta">${dexText} · Generation ${p.gen}${r ? ` · Current rating: ${r} (${rankLabel(r)})` : ''}</div>
+        <div class="single-rank-row">
+          ${[1,2,3,4].map(n => `<button class="single-rank-btn r${n} ${r===n?'selected':''}" data-rank="${n}"><span class="keycap">${n}</span><br>${rankLabel(n)}</button>`).join('')}
+        </div>
+        <div class="single-nav">
+          <button class="btn" id="singlePrev" ${idx === 0 ? 'disabled' : ''}>← Previous</button>
+          <span class="small">Press 1–4 to rate and move to the next Pokémon</span>
+          <button class="btn" id="singleNext" ${idx === list.length - 1 ? 'disabled' : ''}>Next →</button>
+        </div>
+      </div>`;
+
+    $$('.single-rank-btn', els.singleRating).forEach(btn => btn.addEventListener('click', () => {
+      setRank(p.key, Number(btn.dataset.rank), true);
+    }));
+    $('#singlePrev')?.addEventListener('click', () => moveSingle(-1));
+    $('#singleNext')?.addEventListener('click', () => moveSingle(1));
+  }
+
+  function setRank(key, rank, advanceSingle = false) {
+    const oldLoveSignature = loveSignature();
+    rankings[key] = rank;
+    saveJSON(RANK_KEY, rankings);
+    if (loveSignature() !== oldLoveSignature) tournament = invalidateTournament(tournament);
+    saveJSON(TOURNEY_KEY, tournament);
+    renderStats();
+    renderGenerationTabs();
+
+    if (advanceSingle && ui.mode === 'rate' && ui.ratingView === 'single') {
+      const list = generationList();
+      const current = ensureSingleIndex();
+      if (current < list.length - 1) {
+        ui.singleIndexByGen[ui.activeGen] = current + 1;
+        saveJSON(UI_KEY, ui);
+      } else if (list.every(p => [1,2,3,4].includes(Number(rankings[p.key])))) {
+        toast(`Generation ${ui.activeGen} complete.`);
+      }
+      renderSingleRating();
+    } else {
+      renderRatingView();
+    }
+  }
+
+  function invalidateTournament(t) {
+    if (!t) return null;
+    return { ...t, stale: true };
+  }
+
+  function handleKeyboardShortcuts(e) {
+    if (e.defaultPrevented || e.ctrlKey || e.metaKey || e.altKey) return;
+    const target = e.target;
+    const tag = target?.tagName?.toLowerCase();
+    if (tag === 'input' || tag === 'textarea' || tag === 'select' || target?.isContentEditable) return;
+
+    if (ui.mode === 'rate' && ui.ratingView === 'single' && /^[1-4]$/.test(e.key)) {
+      const p = currentSinglePokemon();
+      if (!p) return;
+      e.preventDefault();
+      setRank(p.key, Number(e.key), true);
+      return;
+    }
+
+    if (ui.mode === 'compare' && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
+      const side = e.key === 'ArrowLeft' ? 'left' : 'right';
+      const card = $(`.choice-card[data-side="${side}"]`, els.compareShell);
+      if (!card) return;
+      e.preventDefault();
+      chooseFavorite(card.dataset.key, side);
+    }
+  }
+
+  function loveList() { return pokemon.filter(p => Number(rankings[p.key]) === 4); }
+  function loveSignature() { return loveList().map(p => p.key).sort().join('|'); }
+
+  function xorshift32(seed) {
+    let x = seed >>> 0;
+    return () => {
+      x ^= x << 13; x ^= x >>> 17; x ^= x << 5;
+      return (x >>> 0) / 4294967296;
+    };
+  }
+
+  function shuffledKeys(items, seed) {
+    const arr = items.map(p => p.key);
+    const rand = xorshift32(seed);
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(rand() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  }
+
+  function startTournament() {
+    const loves = loveList();
+    if (!loves.length) { tournament = null; saveJSON(TOURNEY_KEY, null); renderCompare(); return; }
+    const seed = Math.floor(Math.random() * 0xFFFFFFFF) >>> 0;
+    const order = shuffledKeys(loves, seed);
+    tournament = {
+      signature: loveSignature(),
+      seed,
+      order,
+      champion: order[0],
+      nextIndex: 1,
+      eliminated: [],
+      wins: {},
+      history: [],
+      stale: false,
+      finished: order.length <= 1
+    };
+    saveJSON(TOURNEY_KEY, tournament);
+    renderCompare();
+  }
+
+  function getPokemon(key) { return pokemon.find(p => p.key === key); }
+
+  async function renderCompare() {
+    compareInputLocked = true;
+    const loves = loveList();
+    const signature = loveSignature();
+
+    if (!loves.length) {
+      els.compareShell.innerHTML = `
+        <div class="winner">
+          <div class="crown">💗</div>
+          <h2>No “Love” Pokémon yet</h2>
+          <p class="compare-note">Rate at least two Pokémon as 4 = Love, then come back here.</p>
+          <p><button class="btn primary" id="backToRating">Go to rating</button></p>
+        </div>`;
+      $('#backToRating')?.addEventListener('click', () => switchMode('rate'));
+      compareInputLocked = false;
+      return;
+    }
+
+    if (loves.length === 1) {
+      const p = loves[0];
+      await ensureLargeImages([p]);
+      renderSingleWinner(p, 'It is the only Pokémon currently rated 4 = Love.');
+      compareInputLocked = false;
+      return;
+    }
+
+    if (!tournament || tournament.signature !== signature || tournament.stale) {
+      els.compareShell.innerHTML = `
+        <div class="compare-top">
+          <div>
+            <h2>Head-to-head favorite finder</h2>
+            <p class="compare-note">You have <strong>${loves.length}</strong> Pokémon rated 4. One Pokémon stays, the less-liked one is swiped away, and a new challenger appears.</p>
+          </div>
+        </div>
+        ${tournament?.stale ? `<div class="warning">Your 4 = Love list changed since the last comparison. Restart the comparison so it uses the current list.</div>` : ''}
+        <div style="text-align:center;padding:35px 10px 15px">
+          <button class="btn primary" id="startTourney">${tournament ? 'Restart comparison' : 'Start comparison'}</button>
+          <p class="small">The starting order is shuffled to reduce order bias. Your progress auto-saves.</p>
+        </div>`;
+      $('#startTourney')?.addEventListener('click', startTournament);
+      compareInputLocked = false;
+      return;
+    }
+
+    if (tournament.finished || tournament.nextIndex >= tournament.order.length) {
+      tournament.finished = true;
+      saveJSON(TOURNEY_KEY, tournament);
+      const p = getPokemon(tournament.champion);
+      if (p) await ensureLargeImages([p]);
+      renderSingleWinner(p, `Winner after ${Math.max(0, tournament.order.length - 1)} head-to-head choices.`);
+      compareInputLocked = false;
+      return;
+    }
+
+    const champion = getPokemon(tournament.champion);
+    const challenger = getPokemon(tournament.order[tournament.nextIndex]);
+    if (!champion || !challenger) {
+      tournament = null;
+      saveJSON(TOURNEY_KEY, null);
+      return renderCompare();
+    }
+
+    await ensureLargeImages([champion, challenger]);
+    const done = Math.max(0, tournament.nextIndex - 1);
+    const total = tournament.order.length - 1;
+    const pct = total ? Math.round(done / total * 100) : 0;
+
+    els.compareShell.innerHTML = `
+      <div class="compare-top">
+        <div>
+          <h2>Which one do you like more?</h2>
+          <p class="compare-note">Choose the Pokémon you prefer by clicking it or using <span class="keycap">←</span> for the left Pokémon and <span class="keycap">→</span> for the right. The loser is eliminated; the winner faces the next challenger.</p>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn" id="undoCompare" ${tournament.history?.length ? '' : 'disabled'}>Undo</button>
+          <button class="btn" id="restartCompare">Restart</button>
+        </div>
+      </div>
+      <div class="compare-progress">
+        <div class="small">${done} of ${total} comparisons completed</div>
+        <div class="progress-track"><div class="progress-fill" style="width:${pct}%"></div></div>
+      </div>
+      <div class="versus">
+        ${choiceCard(champion, 'left')}
+        <div class="vs-label">VS</div>
+        ${choiceCard(challenger, 'right')}
+      </div>`;
+
+    $$('.choice-card', els.compareShell).forEach(card => {
+      card.addEventListener('click', e => {
+        if (e.target.closest('.choose-btn') || e.currentTarget === card) chooseFavorite(card.dataset.key, card.dataset.side);
+      });
+    });
+    $$('.choose-btn', els.compareShell).forEach(btn => btn.addEventListener('click', e => {
+      e.stopPropagation();
+      chooseFavorite(btn.dataset.key, btn.dataset.side);
+    }));
+    $('#restartCompare')?.addEventListener('click', startTournament);
+    $('#undoCompare')?.addEventListener('click', undoFavorite);
+    compareInputLocked = false;
+  }
+
+  function choiceCard(p, side) {
+    const img = p.image || p.sprite;
+    return `<div class="choice-card" data-key="${escapeAttr(p.key)}" data-side="${side}" role="button" tabindex="0">
+      ${img ? `<img src="${escapeAttr(img)}" alt="${escapeAttr(p.name)}" onerror="this.src='${escapeAttr(p.sprite || '')}'" />` : `<div class="img-placeholder" style="height:330px;display:grid;place-items:center">Image unavailable</div>`}
+      <h3>${escapeHTML(p.name)}</h3>
+      <div class="meta">${p.dex === '????' ? '#????' : '#' + p.dex} · Generation ${p.gen}</div>
+      <button class="choose-btn" data-key="${escapeAttr(p.key)}" data-side="${side}">${side === 'left' ? '← ' : ''}I choose ${escapeHTML(p.name)}${side === 'right' ? ' →' : ''}</button>
+    </div>`;
+  }
+
+  function chooseFavorite(winnerKey, side) {
+    if (compareInputLocked || !tournament || tournament.finished) return;
+    compareInputLocked = true;
+    const oldChampion = tournament.champion;
+    const challengerKey = tournament.order[tournament.nextIndex];
+    if (![oldChampion, challengerKey].includes(winnerKey)) {
+      compareInputLocked = false;
+      return;
+    }
+
+    const loserKey = winnerKey === oldChampion ? challengerKey : oldChampion;
+    tournament.history = tournament.history || [];
+    tournament.history.push({
+      champion: oldChampion,
+      nextIndex: tournament.nextIndex,
+      eliminatedLength: tournament.eliminated.length,
+      wins: { ...tournament.wins }
+    });
+    tournament.eliminated.push(loserKey);
+    tournament.champion = winnerKey;
+    tournament.wins[winnerKey] = (tournament.wins[winnerKey] || 0) + 1;
+    tournament.nextIndex += 1;
+    tournament.finished = tournament.nextIndex >= tournament.order.length;
+    saveJSON(TOURNEY_KEY, tournament);
+
+    const loserCard = $(`.choice-card[data-key="${cssEscape(loserKey)}"]`, els.compareShell);
+    if (loserCard) {
+      loserCard.classList.add(side === 'left' && loserKey === winnerKey ? 'swipe-right' : (loserCard.dataset.side === 'left' ? 'swipe-left' : 'swipe-right'));
+      setTimeout(renderCompare, 230);
+    } else renderCompare();
+  }
+
+  function undoFavorite() {
+    if (!tournament?.history?.length) return;
+    const prev = tournament.history.pop();
+    tournament.champion = prev.champion;
+    tournament.nextIndex = prev.nextIndex;
+    tournament.eliminated = tournament.eliminated.slice(0, prev.eliminatedLength);
+    tournament.wins = prev.wins || {};
+    tournament.finished = false;
+    saveJSON(TOURNEY_KEY, tournament);
+    renderCompare();
+  }
+
+  function renderSingleWinner(p, note) {
+    if (!p) { compareInputLocked = false; return; }
+    const img = p.image || p.sprite;
+    els.compareShell.innerHTML = `
+      <div class="winner">
+        <div class="crown">👑</div>
+        ${img ? `<img src="${escapeAttr(img)}" alt="${escapeAttr(p.name)}" onerror="this.src='${escapeAttr(p.sprite || '')}'" />` : ''}
+        <h2>${escapeHTML(p.name)}</h2>
+        <div class="poke-meta">${p.dex === '????' ? '#????' : '#' + p.dex} · Generation ${p.gen}</div>
+        <p class="compare-note">${escapeHTML(note)}</p>
+        <p style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:18px">
+          <button class="btn primary" id="restartWinner">Run comparison again</button>
+          <button class="btn" id="rateMore">Back to ratings</button>
+        </p>
+      </div>`;
+    $('#restartWinner')?.addEventListener('click', startTournament);
+    $('#rateMore')?.addEventListener('click', () => switchMode('rate'));
+  }
+
+  async function exportCSV() {
+    // Export only the user's actual ratings. Importing this file later will restore exactly these ratings.
+    const rated = pokemon.filter(p => [1,2,3,4].includes(Number(rankings[p.key])));
+    const rows = [['pokedex_number','pokemon_name','generation','rank']];
+    rated.forEach(p => rows.push([p.dex, p.name, p.gen, Number(rankings[p.key])]));
+    const csv = rows.map(row => row.map(csvCell).join(',')).join('\r\n');
+
+    try {
+      const result = await saveTextFile('\ufeff' + csv, `pokemon-ratings-${dateStamp()}.csv`, 'text/csv;charset=utf-8');
+      if (result === 'picker') toast(`Saved ${rated.length} ratings to CSV.`);
+      else toast(`Download started: ${rated.length} ratings.`);
+    } catch (err) {
+      if (err?.name === 'AbortError') return;
+      alert(`Export failed: ${err.message || err}`);
+    }
+  }
+
+  async function exportBackup() {
+    const payload = {
+      app: 'Pokemon Favorite Finder',
+      version: 4,
+      exportedAt: new Date().toISOString(),
+      rankings,
+      tournament,
+      pokemonSnapshot: pokemon.map(p => ({ key:p.key, dex:p.dex, name:p.name, gen:p.gen }))
+    };
+    try {
+      const result = await saveTextFile(JSON.stringify(payload, null, 2), `pokemon-favorite-backup-${dateStamp()}.json`, 'application/json');
+      if (result === 'picker') toast('Full backup saved.');
+      else toast('Full backup download started.');
+    } catch (err) {
+      if (err?.name === 'AbortError') return;
+      alert(`Backup failed: ${err.message || err}`);
+    }
+  }
+
+  async function openImportPicker() {
+    // Chromium/Edge: use the native file picker directly when available.
+    if (window.showOpenFilePicker) {
+      try {
+        const [handle] = await window.showOpenFilePicker({
+          multiple: false,
+          types: [{
+            description: 'Pokémon progress files',
+            accept: {
+              'text/csv': ['.csv'],
+              'application/json': ['.json']
+            }
+          }]
+        });
+        if (!handle) return;
+        const file = await handle.getFile();
+        await processImportFile(file);
+        return;
+      } catch (err) {
+        if (err?.name === 'AbortError') return;
+        console.warn('Native open picker failed; falling back to file input.', err);
+      }
+    }
+
+    // Universal fallback.
+    els.fileInput.value = '';
+    els.fileInput.click();
+  }
+
+  async function importFile(e) {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    await processImportFile(file);
+  }
+
+  async function processImportFile(file) {
+    try {
+      const raw = await file.text();
+      let result;
+      if (file.name.toLowerCase().endsWith('.json') || raw.trim().startsWith('{')) result = importJSONBackup(raw);
+      else result = importCSV(raw);
+
+      saveJSON(RANK_KEY, rankings);
+      saveJSON(TOURNEY_KEY, tournament);
+      renderAll();
+      toast(result || 'Progress imported successfully.');
+    } catch (err) {
+      alert(`Import failed: ${err.message || err}`);
+    }
+  }
+
+  function sanitizeRankingsObject(input) {
+    const clean = {};
+    if (!input || typeof input !== 'object' || Array.isArray(input)) return clean;
+    for (const [key, value] of Object.entries(input)) {
+      const rank = Number(value);
+      if ([1,2,3,4].includes(rank)) clean[key] = rank;
+    }
+    return clean;
+  }
+
+  function importJSONBackup(raw) {
+    const data = JSON.parse(raw);
+    if (!data || typeof data.rankings !== 'object') throw new Error('This JSON file does not contain Pokémon rankings.');
+
+    // Replace, rather than merge, so the page exactly matches the imported backup.
+    rankings = sanitizeRankingsObject(data.rankings);
+    tournament = data.tournament && typeof data.tournament === 'object' ? data.tournament : null;
+    if (tournament && tournament.signature !== loveSignature()) tournament = invalidateTournament(tournament);
+    return `Imported ${Object.keys(rankings).length} ratings from backup.`;
+  }
+
+  function importCSV(raw) {
+    const rows = parseCSV(raw.replace(/^\uFEFF/, ''));
+    if (rows.length < 1) throw new Error('The CSV is empty.');
+    const header = rows[0].map(x => x.trim().toLowerCase());
+    const iDex = header.indexOf('pokedex_number');
+    const iName = header.indexOf('pokemon_name');
+    const iRank = header.indexOf('rank');
+    if (iRank < 0 || (iDex < 0 && iName < 0)) throw new Error('Expected columns: pokedex_number, pokemon_name, generation, rank.');
+
+    const byName = new Map(pokemon.map(p => [p.name.toLowerCase(), p]));
+    const byDex = new Map(pokemon.filter(p => p.dex !== '????').map(p => [p.dex.replace(/^0+/, ''), p]));
+    const imported = {};
+    let matched = 0;
+    let skipped = 0;
+
+    for (const row of rows.slice(1)) {
+      if (!row.some(cell => String(cell || '').trim() !== '')) continue;
+      const name = iName >= 0 ? (row[iName] || '').trim() : '';
+      const dexRaw = iDex >= 0 ? (row[iDex] || '').trim().replace(/^#/, '') : '';
+      const rankRaw = (row[iRank] || '').trim();
+      const p = (name && byName.get(name.toLowerCase())) || (dexRaw && dexRaw !== '????' && byDex.get(dexRaw.replace(/^0+/, '')));
+      if (!p) { skipped++; continue; }
+
+      // Blank ranks mean "unrated" and therefore are intentionally omitted.
+      if (rankRaw === '') { matched++; continue; }
+      const n = Number(rankRaw);
+      if (![1,2,3,4].includes(n)) { skipped++; continue; }
+      imported[p.key] = n;
+      matched++;
+    }
+
+    // The imported CSV becomes the complete rating state.
+    rankings = imported;
+    tournament = null;
+    return `Imported ${Object.keys(rankings).length} ratings${skipped ? ` (${skipped} row${skipped === 1 ? '' : 's'} skipped)` : ''}.`;
+  }
+
+  function parseCSV(str) {
+    const rows = []; let row = []; let cell = ''; let quoted = false;
+    for (let i = 0; i < str.length; i++) {
+      const ch = str[i];
+      if (quoted) {
+        if (ch === '"' && str[i+1] === '"') { cell += '"'; i++; }
+        else if (ch === '"') quoted = false;
+        else cell += ch;
+      } else {
+        if (ch === '"') quoted = true;
+        else if (ch === ',') { row.push(cell); cell = ''; }
+        else if (ch === '\n') { row.push(cell.replace(/\r$/, '')); rows.push(row); row = []; cell = ''; }
+        else cell += ch;
+      }
+    }
+    row.push(cell.replace(/\r$/, ''));
+    if (row.some(v => v !== '') || rows.length === 0) rows.push(row);
+    return rows;
+  }
+
+  function csvCell(v) {
+    const s = String(v ?? '');
+    return /[",\r\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  }
+
+  async function saveTextFile(content, filename, type) {
+    const blob = new Blob([content], { type });
+
+    // Best option in modern Chromium/Edge: this writes the file through a real Save dialog.
+    if (window.showSaveFilePicker) {
+      try {
+        const ext = filename.toLowerCase().endsWith('.json') ? '.json' : '.csv';
+        const mime = ext === '.json' ? 'application/json' : 'text/csv';
+        const handle = await window.showSaveFilePicker({
+          suggestedName: filename,
+          types: [{
+            description: ext === '.json' ? 'JSON backup' : 'CSV file for Excel',
+            accept: { [mime]: [ext] }
+          }]
+        });
+        const writable = await handle.createWritable();
+        await writable.write(blob);
+        await writable.close();
+        return 'picker';
+      } catch (err) {
+        if (err?.name === 'AbortError') throw err;
+        console.warn('Native save picker failed; falling back to a browser download.', err);
+      }
+    }
+
+    // Legacy Microsoft browser fallback.
+    if (navigator.msSaveOrOpenBlob) {
+      navigator.msSaveOrOpenBlob(blob, filename);
+      return 'download';
+    }
+
+    // Standard browser download fallback.
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.style.display = 'none';
+    a.rel = 'noopener';
+    document.body.appendChild(a);
+    a.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window }));
+    a.remove();
+    // Keep the object URL alive long enough for browsers that start the download asynchronously.
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+    return 'download';
+  }
+
+  function dateStamp() {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  }
+
+  function escapeHTML(s) {
+    return String(s).replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
+  }
+  function escapeAttr(s) { return escapeHTML(s); }
+  function cssEscape(s) {
+    if (window.CSS?.escape) return CSS.escape(s);
+    return String(s).replace(/([ #;?%&,.+*~\':"!^$\[\]()=>|\/@])/g,'\\$1');
+  }
+
+  function toast(message) {
+    clearTimeout(toastTimer);
+    els.toast.textContent = message;
+    els.toast.classList.add('show');
+    toastTimer = setTimeout(() => els.toast.classList.remove('show'), 2400);
+  }
+
+  async function boot() {
+    try {
+      setLoading(true, 'Loading Pokémon from Bulbapedia…', 'The first load reads the National Pokédex list from Bulbapedia. Later loads use the browser cache.');
+      await fetchBulbapediaData(false);
+      initAfterData();
+    } catch (e) {
+      setLoading(true,
+        'Could not load Bulbapedia data',
+        'This file needs internet access the first time it is opened. Your browser also needs to allow the Bulbapedia MediaWiki API request.',
+        `${e.message || e}\n\nTry Retry. If the browser blocks requests from a local file, open index.html through a simple local web server instead.`
+      );
+    }
+  }
+
+  boot();
+})();
+</script>
+</body>
+</html>
